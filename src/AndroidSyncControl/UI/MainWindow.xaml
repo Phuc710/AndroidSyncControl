@@ -8,7 +8,7 @@
         mc:Ignorable="d"
         Title="AndroidSyncControl" 
         Icon="pack://application:,,,/Resources/appicon.ico"
-        Height="780" Width="615" MinWidth="480" MinHeight="600"
+        Height="780" Width="615" MinWidth="380" MinHeight="500"
         WindowStartupLocation="CenterScreen"
         FontFamily="Segoe UI" FontSize="13"
         Background="#FFFFFF"
@@ -26,7 +26,7 @@
         </Grid.ColumnDefinitions>
 
         <!-- Left Area: Live Phone Screen Canvas (Embedded) OR Minimal White Connection Screen -->
-        <Grid Grid.Column="0" Background="#FFFFFF">
+        <Grid Grid.Column="0" Background="#0F172A">
             <!-- 1. Live Scrcpy Screen Canvas (Visible when connected) -->
             <WindowsFormsHost x:Name="wfHost" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Visibility="Collapsed">
                 <wf:Panel x:Name="scrcpyPanel" BackColor="Black"/>
@@ -36,14 +36,10 @@
             <Grid x:Name="overlayPanel" Visibility="Visible" Background="#FFFFFF">
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="360" Margin="24">
                     
-                    <!-- Connecting Device 3D Logo / Illustration (180x180 px chuẩn, high-quality rendering) -->
+                    <!-- Logo plain — no shadow, no border -->
                     <Image Source="pack://application:,,,/Resources/phone_connect.png"
-                           Width="180" Height="180" Margin="0,0,0,18" HorizontalAlignment="Center"
-                           RenderOptions.BitmapScalingMode="HighQuality">
-                        <Image.Effect>
-                            <DropShadowEffect BlurRadius="24" ShadowDepth="6" Direction="270" Color="#60A5FA" Opacity="0.35"/>
-                        </Image.Effect>
-                    </Image>
+                           Width="125" Height="125" Margin="0,0,0,16" HorizontalAlignment="Center"
+                           RenderOptions.BitmapScalingMode="HighQuality"/>
 
                     <!-- Title -->
                     <TextBlock x:Name="txtStatusTitle" 
@@ -58,70 +54,51 @@
                                HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,20"/>
 
                     <!-- Subtle Status Indicator (Dot + Text) -->
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,12">
                         <Ellipse x:Name="statusDot" Width="7" Height="7" Fill="#2563EB" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBlock x:Name="txtStatusState" Text="Searching for device..." 
                                    FontSize="12.5" Foreground="#64748B" VerticalAlignment="Center"/>
                     </StackPanel>
 
-                    <!-- Subtle Loading Line (Slim, clean, minimal) -->
-                    <ProgressBar x:Name="progressBarStatus" Height="2" Width="140" 
-                                 IsIndeterminate="True" BorderThickness="0"
-                                 Foreground="#2563EB" Background="#E2E8F0"
-                                 HorizontalAlignment="Center" Margin="0,0,0,22"/>
-
-                    <!-- Retry Button (Professional Windows desktop utility style) -->
-                    <Button x:Name="btnRetry" Content="Retry" Click="BtnRetryNow_Click"
-                            Width="84" Height="30" HorizontalAlignment="Center">
-                        <Button.Style>
-                            <Style TargetType="Button">
-                                <Setter Property="Background" Value="#FFFFFF"/>
-                                <Setter Property="BorderBrush" Value="#D1D5DB"/>
-                                <Setter Property="Foreground" Value="#1E293B"/>
-                                <Setter Property="BorderThickness" Value="1"/>
-                                <Setter Property="FontSize" Value="12.5"/>
-                                <Setter Property="FontWeight" Value="Medium"/>
-                                <Setter Property="Cursor" Value="Hand"/>
-                                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border x:Name="bdr" Background="{TemplateBinding Background}"
-                                                    BorderBrush="{TemplateBinding BorderBrush}"
-                                                    BorderThickness="{TemplateBinding BorderThickness}"
-                                                    CornerRadius="4" SnapsToDevicePixels="True">
-                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <MultiTrigger>
-                                                    <MultiTrigger.Conditions>
-                                                        <Condition Property="IsEnabled" Value="True"/>
-                                                        <Condition Property="IsMouseOver" Value="True"/>
-                                                    </MultiTrigger.Conditions>
-                                                    <Setter TargetName="bdr" Property="Background" Value="#F1F5F9"/>
-                                                    <Setter TargetName="bdr" Property="BorderBrush" Value="#94A3B8"/>
-                                                </MultiTrigger>
-                                                <MultiTrigger>
-                                                    <MultiTrigger.Conditions>
-                                                        <Condition Property="IsEnabled" Value="True"/>
-                                                        <Condition Property="IsPressed" Value="True"/>
-                                                    </MultiTrigger.Conditions>
-                                                    <Setter TargetName="bdr" Property="Background" Value="#E2E8F0"/>
-                                                    <Setter TargetName="bdr" Property="BorderBrush" Value="#64748B"/>
-                                                </MultiTrigger>
-                                                <Trigger Property="IsEnabled" Value="False">
-                                                    <Setter Property="Cursor" Value="Arrow"/>
-                                                    <Setter TargetName="bdr" Property="Background" Value="#F8FAFC"/>
-                                                    <Setter TargetName="bdr" Property="BorderBrush" Value="#E2E8F0"/>
-                                                    <Setter Property="Foreground" Value="#9CA3AF"/>
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </Button.Style>
-                    </Button>
+                    <!-- Smooth Circular Spinner -->
+                    <Grid x:Name="progressBarStatus" Width="32" Height="32" HorizontalAlignment="Center" Margin="0,0,0,0">
+                        <Grid.RenderTransform>
+                            <RotateTransform x:Name="spinnerRotate" CenterX="16" CenterY="16" Angle="0"/>
+                        </Grid.RenderTransform>
+                        <Grid.Triggers>
+                            <EventTrigger RoutedEvent="Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard RepeatBehavior="Forever">
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="spinnerRotate"
+                                            Storyboard.TargetProperty="Angle"
+                                            From="0" To="360"
+                                            Duration="0:0:0.9"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Grid.Triggers>
+                        <!-- Ring track -->
+                        <Ellipse Width="32" Height="32"
+                                 Stroke="#E2E8F0" StrokeThickness="3"
+                                 Fill="Transparent"/>
+                        <!-- Spinner arc — drawn as a thin Path arc segment -->
+                        <Path x:Name="spinnerArc" Fill="Transparent" StrokeThickness="3" StrokeStartLineCap="Round" StrokeEndLineCap="Round">
+                            <Path.Stroke>
+                                <SolidColorBrush x:Name="spinnerBrush" Color="#2563EB"/>
+                            </Path.Stroke>
+                            <Path.Data>
+                                <PathGeometry>
+                                    <PathFigure StartPoint="16,1" IsClosed="False">
+                                        <ArcSegment Point="31,16"
+                                                    Size="15,15"
+                                                    SweepDirection="Clockwise"
+                                                    IsLargeArc="False"/>
+                                    </PathFigure>
+                                </PathGeometry>
+                            </Path.Data>
+                        </Path>
+                    </Grid>
                 </StackPanel>
             </Grid>
         </Grid>

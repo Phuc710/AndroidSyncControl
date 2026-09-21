@@ -13,6 +13,7 @@ namespace AndroidSyncControl.UI.Controls
     public partial class ShopeeSidebar : UserControl
     {
         public Func<string> GetCurrentDeviceId { get; set; }
+        public Action RequestAutoFit { get; set; }
 
         public ShopeeSidebar()
         {
@@ -76,6 +77,12 @@ namespace AndroidSyncControl.UI.Controls
             string info = await ShopeeBypassService.GetPhoneInfoAsync(ActiveDeviceId);
             MessageBox.Show(info, "Thông Tin Thiết Bị", MessageBoxButton.OK, MessageBoxImage.Information);
             SetStatus("Ready");
+        }
+
+        private void btn_fit_screen_Click(object sender, RoutedEventArgs e)
+        {
+            RequestAutoFit?.Invoke();
+            SetStatus("Fit window ✓");
         }
 
         private async void btn_power_Click(object sender, RoutedEventArgs e)

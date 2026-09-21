@@ -25,6 +25,12 @@ namespace AndroidSyncControl.UI
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr SetFocus(IntPtr hWnd);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+
         private const int GWL_STYLE = -16;
         private const int WS_VISIBLE = 0x10000000;
         private const int WS_CHILD = 0x40000000;
@@ -54,10 +60,23 @@ namespace AndroidSyncControl.UI
             Log("MainWindow_Loaded fired");
             this.Closing += (s, ev) => Log($"MainWindow_Closing fired, Cancel={ev.Cancel}");
             scrcpyPanel.Resize += ScrcpyPanel_Resize;
+            scrcpyPanel.DoubleClick += (s, ev) => Dispatcher.Invoke(AutoFitWindowToDevice);
+
+            // Click vào màn hình → route focus vào SDL2 HWND để gõ phím được
+            scrcpyPanel.MouseClick += (s, ev) => FocusScrcpy();
+            scrcpyPanel.MouseDown  += (s, ev) => FocusScrcpy();
+
+            // Style panel with modern dark slate backdrop
+            scrcpyPanel.BackColor = System.Drawing.Color.FromArgb(15, 23, 42);
+
+            // Wire up sidebar fit action and keyboard shortcuts
+            shopeeSidebar.RequestAutoFit = AutoFitWindowToDevice;
+            this.KeyDown += MainWindow_KeyDown;
 
             // Wire up supervisor callbacks
             DeviceConnectionSupervisor.Instance.EmbedScrcpyAction = EmbedScrcpyWindow;
             DeviceConnectionSupervisor.Instance.StateChanged += OnSupervisorStateChanged;
+            DeviceConnectionSupervisor.Instance.DeviceResolutionChanged += OnDeviceResolutionChanged;
 
             // Start single supervisor
             DeviceConnectionSupervisor.Instance.Start();
@@ -67,6 +86,7 @@ namespace AndroidSyncControl.UI
         {
             Log("MainWindow_Closed fired");
             DeviceConnectionSupervisor.Instance.StateChanged -= OnSupervisorStateChanged;
+            DeviceConnectionSupervisor.Instance.DeviceResolutionChanged -= OnDeviceResolutionChanged;
             DeviceConnectionSupervisor.Instance.Stop();
         }
 
@@ -82,12 +102,131 @@ namespace AndroidSyncControl.UI
             ResizeScrcpy();
         }
 
+        private void MainWindow_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if ((e.Key == System.Windows.Input.Key.F && (System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Control) == System.Windows.Input.ModifierKeys.Control) 
+                || e.Key == System.Windows.Input.Key.F11)
+            {
+                AutoFitWindowToDevice();
+                e.Handled = true;
+            }
+        }
+
+        private void OnDeviceResolutionChanged(object sender, (int width, int height) res)
+        {
+            Dispatcher.InvokeAsync(() =>
+            {
+                Log($"DeviceResolutionChanged caught in MainWindow: {res.width}x{res.height}");
+                AutoFitWindowToDevice();
+            });
+        }
+
+        public void AutoFitWindowToDevice()
+        {
+            if (this.WindowState == WindowState.Minimized) return;
+
+            var workArea = SystemParameters.WorkArea;
+            double maxWindowHeight = workArea.Height * 0.92;
+            double maxWindowWidth = workArea.Width * 0.95;
+
+            // Target height bounded by desktop work area
+            double targetH = this.ActualHeight > 400 ? this.ActualHeight : 780;
+            if (targetH > maxWindowHeight) targetH = maxWindowHeight;
+            if (targetH < 620) targetH = 620;
+
+            // Calculate chrome margins (title bar + window borders)
+            double chromeH = 39;
+            double chromeW = 16;
+            if (this.ActualHeight > 0 && mainGrid.ActualHeight > 0)
+            {
+                double diffH = this.ActualHeight - mainGrid.ActualHeight;
+                if (diffH > 10 && diffH < 80) chromeH = diffH;
+            }
+            if (this.ActualWidth > 0 && mainGrid.ActualWidth > 0)
+            {
+                double diffW = this.ActualWidth - mainGrid.ActualWidth;
+                if (diffW >= 0 && diffW < 40) chromeW = diffW;
+            }
+
+            double contentHeight = targetH - chromeH;
+            if (contentHeight < 400) contentHeight = 400;
+
+            double ratio = DeviceConnectionSupervisor.Instance.DeviceAspectRatio;
+            if (ratio <= 0.1 || ratio > 10.0) ratio = 9.0 / 16.0;
+
+            // Sidebar width is fixed at 185
+            double sidebarW = 185;
+            double idealPhoneW = contentHeight * ratio;
+
+            // If wide phone or landscape exceeds screen width, scale height down proportionally
+            if (idealPhoneW + sidebarW + chromeW > maxWindowWidth)
+            {
+                idealPhoneW = maxWindowWidth - sidebarW - chromeW;
+                contentHeight = idealPhoneW / ratio;
+                targetH = contentHeight + chromeH;
+            }
+
+            double targetW = Math.Round(idealPhoneW + sidebarW + chromeW);
+
+            if (this.WindowState == WindowState.Maximized)
+            {
+                this.WindowState = WindowState.Normal;
+            }
+
+            this.Width = targetW;
+            this.Height = Math.Round(targetH);
+
+            // Re-center window if pushed off desktop screen
+            if (this.Left + this.Width > workArea.Right)
+            {
+                this.Left = Math.Max(workArea.Left, workArea.Right - this.Width);
+            }
+            if (this.Top + this.Height > workArea.Bottom)
+            {
+                this.Top = Math.Max(workArea.Top, workArea.Bottom - this.Height);
+            }
+
+            Dispatcher.InvokeAsync(() =>
+            {
+                ResizeScrcpy();
+            }, System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+
         private void ResizeScrcpy()
         {
-            if (_scrcpyHwnd != IntPtr.Zero && scrcpyPanel.Width > 50 && scrcpyPanel.Height > 50)
+            if (_scrcpyHwnd == IntPtr.Zero || scrcpyPanel.Width <= 10 || scrcpyPanel.Height <= 10)
+                return;
+
+            int panelW = scrcpyPanel.Width;
+            int panelH = scrcpyPanel.Height;
+
+            double ratio = DeviceConnectionSupervisor.Instance.DeviceAspectRatio;
+            if (ratio <= 0.1 || ratio > 10.0) ratio = 9.0 / 16.0;
+
+            int targetW, targetH;
+            double panelRatio = (double)panelW / panelH;
+
+            if (panelRatio > ratio)
             {
-                MoveWindow(_scrcpyHwnd, 0, 0, scrcpyPanel.Width, scrcpyPanel.Height, true);
+                // Panel is wider than phone aspect ratio -> fit to full height
+                targetH = panelH;
+                targetW = (int)Math.Round(panelH * ratio);
             }
+            else
+            {
+                // Panel is taller than phone aspect ratio -> fit to full width
+                targetW = panelW;
+                targetH = (int)Math.Round(panelW / ratio);
+            }
+
+            if (targetW < 10) targetW = 10;
+            if (targetH < 10) targetH = 10;
+
+            // Center scrcpy window perfectly inside panel
+            int targetX = (panelW - targetW) / 2;
+            int targetY = (panelH - targetH) / 2;
+
+            MoveWindow(_scrcpyHwnd, targetX, targetY, targetW, targetH, true);
         }
 
         private bool EmbedScrcpyWindow(IntPtr hwnd)
@@ -109,10 +248,9 @@ namespace AndroidSyncControl.UI
                     style = (style & ~(unchecked((int)0x80000000) | 0x00C00000 | 0x00040000)) | WS_CHILD | WS_VISIBLE;
                     SetWindowLong(hwnd, GWL_STYLE, style);
 
-                    int w = scrcpyPanel.Width > 0 ? scrcpyPanel.Width : 420;
-                    int h = scrcpyPanel.Height > 0 ? scrcpyPanel.Height : 740;
-                    MoveWindow(hwnd, 0, 0, w, h, true);
+                    ResizeScrcpy();
                     ShowWindow(hwnd, SW_SHOW);
+                    FocusScrcpy(); // Route keyboard focus into SDL2 HWND
 
                     success = true;
                 }
@@ -123,6 +261,14 @@ namespace AndroidSyncControl.UI
             });
 
             return success;
+        }
+
+        // SDL2 không tự nhận focus khi là WS_CHILD — phải gọi SetFocus() trực tiếp vào HWND của nó
+        private void FocusScrcpy()
+        {
+            if (_scrcpyHwnd == IntPtr.Zero) return;
+            SetForegroundWindow(new System.Windows.Interop.WindowInteropHelper(this).Handle);
+            SetFocus(_scrcpyHwnd);
         }
 
         private void OnSupervisorStateChanged(object sender, ConnectionStateChangedEventArgs e)
@@ -136,10 +282,8 @@ namespace AndroidSyncControl.UI
                         txtStatusDetail.Text = "Initializing ADB service...";
                         txtStatusState.Text = "Initializing...";
                         statusDot.Fill = new SolidColorBrush(Color.FromRgb(0x25, 0x63, 0xEB));
+                        spinnerBrush.Color = Color.FromRgb(0x25, 0x63, 0xEB);
                         progressBarStatus.Visibility = Visibility.Visible;
-                        progressBarStatus.IsIndeterminate = true;
-                        progressBarStatus.Foreground = new SolidColorBrush(Color.FromRgb(0x25, 0x63, 0xEB));
-                        btnRetry.IsEnabled = false;
                         wfHost.Visibility = Visibility.Collapsed;
                         overlayPanel.Visibility = Visibility.Visible;
                         this.Title = "AndroidSyncControl";
@@ -151,10 +295,8 @@ namespace AndroidSyncControl.UI
                         txtStatusDetail.Text = "Connect your phone via USB and make sure\nUSB debugging is enabled.";
                         txtStatusState.Text = "Searching for device...";
                         statusDot.Fill = new SolidColorBrush(Color.FromRgb(0x25, 0x63, 0xEB));
+                        spinnerBrush.Color = Color.FromRgb(0x25, 0x63, 0xEB);
                         progressBarStatus.Visibility = Visibility.Visible;
-                        progressBarStatus.IsIndeterminate = true;
-                        progressBarStatus.Foreground = new SolidColorBrush(Color.FromRgb(0x25, 0x63, 0xEB));
-                        btnRetry.IsEnabled = true;
                         wfHost.Visibility = Visibility.Collapsed;
                         overlayPanel.Visibility = Visibility.Visible;
                         this.Title = "AndroidSyncControl";
@@ -167,10 +309,8 @@ namespace AndroidSyncControl.UI
                         txtStatusDetail.Text = $"Device: {e.DeviceModel}";
                         txtStatusState.Text = "Preparing screen stream...";
                         statusDot.Fill = new SolidColorBrush(Color.FromRgb(0x10, 0xB9, 0x81));
+                        spinnerBrush.Color = Color.FromRgb(0x10, 0xB9, 0x81);
                         progressBarStatus.Visibility = Visibility.Visible;
-                        progressBarStatus.IsIndeterminate = true;
-                        progressBarStatus.Foreground = new SolidColorBrush(Color.FromRgb(0x10, 0xB9, 0x81));
-                        btnRetry.IsEnabled = false;
                         wfHost.Visibility = Visibility.Collapsed;
                         overlayPanel.Visibility = Visibility.Visible;
                         shopeeSidebar.UpdateConnectionStatus(e.DeviceModel, "Connecting...", "#2563EB");
@@ -181,10 +321,8 @@ namespace AndroidSyncControl.UI
                         txtStatusDetail.Text = $"Connecting to {e.DeviceModel}...";
                         txtStatusState.Text = "Connecting...";
                         statusDot.Fill = new SolidColorBrush(Color.FromRgb(0x10, 0xB9, 0x81));
+                        spinnerBrush.Color = Color.FromRgb(0x10, 0xB9, 0x81);
                         progressBarStatus.Visibility = Visibility.Visible;
-                        progressBarStatus.IsIndeterminate = true;
-                        progressBarStatus.Foreground = new SolidColorBrush(Color.FromRgb(0x10, 0xB9, 0x81));
-                        btnRetry.IsEnabled = false;
                         wfHost.Visibility = Visibility.Collapsed;
                         overlayPanel.Visibility = Visibility.Visible;
                         shopeeSidebar.UpdateConnectionStatus(e.DeviceModel, "Connecting...", "#2563EB");
@@ -196,7 +334,10 @@ namespace AndroidSyncControl.UI
                         this.Title = "AndroidSyncControl";
                         shopeeSidebar.GetCurrentDeviceId = () => e.DeviceId;
                         shopeeSidebar.UpdateConnectionStatus(e.DeviceModel, "Connected", "#10B981");
-                        ResizeScrcpy();
+                        Dispatcher.InvokeAsync(() =>
+                        {
+                            AutoFitWindowToDevice();
+                        }, System.Windows.Threading.DispatcherPriority.Loaded);
                         break;
 
                     case ConnectionState.ConnectionLost:
@@ -204,10 +345,8 @@ namespace AndroidSyncControl.UI
                         txtStatusDetail.Text = "Device was disconnected. Connect your phone via USB.";
                         txtStatusState.Text = "Disconnected";
                         statusDot.Fill = new SolidColorBrush(Color.FromRgb(0x94, 0xA3, 0xB8));
+                        spinnerBrush.Color = Color.FromRgb(0x94, 0xA3, 0xB8);
                         progressBarStatus.Visibility = Visibility.Visible;
-                        progressBarStatus.IsIndeterminate = true;
-                        progressBarStatus.Foreground = new SolidColorBrush(Color.FromRgb(0x94, 0xA3, 0xB8));
-                        btnRetry.IsEnabled = true;
                         wfHost.Visibility = Visibility.Collapsed;
                         overlayPanel.Visibility = Visibility.Visible;
                         this.Title = "AndroidSyncControl";
@@ -219,10 +358,8 @@ namespace AndroidSyncControl.UI
                         txtStatusDetail.Text = "Waiting for device to respond...";
                         txtStatusState.Text = string.IsNullOrEmpty(e.Message) ? "Reconnecting..." : e.Message;
                         statusDot.Fill = new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B)); // Amber
+                        spinnerBrush.Color = Color.FromRgb(0xF5, 0x9E, 0x0B);
                         progressBarStatus.Visibility = Visibility.Visible;
-                        progressBarStatus.IsIndeterminate = true;
-                        progressBarStatus.Foreground = new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B));
-                        btnRetry.IsEnabled = true;
                         wfHost.Visibility = Visibility.Collapsed;
                         overlayPanel.Visibility = Visibility.Visible;
                         this.Title = "AndroidSyncControl";
@@ -235,7 +372,6 @@ namespace AndroidSyncControl.UI
                         txtStatusState.Text = "ADB service error";
                         statusDot.Fill = new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44));
                         progressBarStatus.Visibility = Visibility.Hidden;
-                        btnRetry.IsEnabled = true;
                         wfHost.Visibility = Visibility.Collapsed;
                         overlayPanel.Visibility = Visibility.Visible;
                         this.Title = "AndroidSyncControl";
@@ -245,9 +381,5 @@ namespace AndroidSyncControl.UI
             });
         }
 
-        private void BtnRetryNow_Click(object sender, RoutedEventArgs e)
-        {
-            DeviceConnectionSupervisor.Instance.RequestReconnectNow();
-        }
     }
 }

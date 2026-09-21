@@ -332,6 +332,7 @@ namespace AndroidSyncControl.UI.Helpers
                 Arguments = args,
                 UseShellExecute = false,
                 CreateNoWindow = true,
+                RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 WorkingDirectory = Path.GetDirectoryName(scrcpyExe)
             };
@@ -340,34 +341,48 @@ namespace AndroidSyncControl.UI.Helpers
 
             StringBuilder stderrLog = new StringBuilder();
 
+            void ProcessScrcpyLine(string line)
+            {
+                if (string.IsNullOrWhiteSpace(line)) return;
+                try
+                {
+                    // Detect scrcpy texture resolution: "INFO: Texture: 720x1280" or "INFO: New texture: 1280x720"
+                    var match = System.Text.RegularExpressions.Regex.Match(line, @"(?:Texture|texture|size)\s*:\s*(\d+)x(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    if (match.Success && int.TryParse(match.Groups[1].Value, out int tw) && int.TryParse(match.Groups[2].Value, out int th))
+                    {
+                        if (tw > 0 && th > 0 && (tw != DeviceScreenWidth || th != DeviceScreenHeight))
+                        {
+                            DeviceScreenWidth = tw;
+                            DeviceScreenHeight = th;
+                            Log($"Scrcpy stream texture updated: {tw}x{th} (Ratio: {DeviceAspectRatio:F4})");
+                            DeviceResolutionChanged?.Invoke(this, (tw, th));
+                        }
+                    }
+                }
+                catch { }
+            }
+
             lock (_scrcpyLock)
             {
                 _scrcpyProc = new Process { StartInfo = psi, EnableRaisingEvents = true };
+                _scrcpyProc.OutputDataReceived += (s, e) =>
+                {
+                    if (!string.IsNullOrEmpty(e.Data))
+                    {
+                        ProcessScrcpyLine(e.Data);
+                    }
+                };
                 _scrcpyProc.ErrorDataReceived += (s, e) =>
                 {
                     if (!string.IsNullOrEmpty(e.Data))
                     {
                         stderrLog.AppendLine(e.Data);
-                        try
-                        {
-                            // Detect scrcpy texture resolution updates: "INFO: Texture: 408x720" or "INFO: New texture: 720x1280"
-                            var match = System.Text.RegularExpressions.Regex.Match(e.Data, @"(?:texture|Device:.*)\s*:\s*(?:.*\s+)?(\d+)x(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                            if (match.Success && int.TryParse(match.Groups[1].Value, out int tw) && int.TryParse(match.Groups[2].Value, out int th))
-                            {
-                                if (tw > 0 && th > 0 && (tw != DeviceScreenWidth || th != DeviceScreenHeight))
-                                {
-                                    DeviceScreenWidth = tw;
-                                    DeviceScreenHeight = th;
-                                    Log($"Scrcpy stream texture updated: {tw}x{th} (Ratio: {DeviceAspectRatio:F4})");
-                                    DeviceResolutionChanged?.Invoke(this, (tw, th));
-                                }
-                            }
-                        }
-                        catch { }
+                        ProcessScrcpyLine(e.Data);
                     }
                 };
 
                 _scrcpyProc.Start();
+                _scrcpyProc.BeginOutputReadLine();
                 _scrcpyProc.BeginErrorReadLine();
                 Log($"scrcpy process started with PID: {_scrcpyProc.Id}");
             }

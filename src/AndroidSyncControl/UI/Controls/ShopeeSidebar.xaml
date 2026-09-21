@@ -212,6 +212,13 @@
                         </StackPanel>
                     </Button>
 
+                    <Button x:Name="btn_fit_screen" Style="{StaticResource SidebarBtn}" Click="btn_fit_screen_Click" ToolTip="Tự động căn chỉnh kích thước cửa sổ vừa khít màn hình điện thoại (Ctrl+F)">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE740;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#64748B"/>
+                            <TextBlock Text="Fit Screen" VerticalAlignment="Center" Foreground="#334155"/>
+                        </StackPanel>
+                    </Button>
+
                     <Button x:Name="btn_power" Style="{StaticResource SidebarBtn}" Click="btn_power_Click">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE7E8;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#64748B"/>
