@@ -1,0 +1,55 @@
+name: Release Pipeline
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Build, Test & Release
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install NSIS
+        run: |
+          choco install nsis -y --no-progress
+
+      - name: Extract Tag Version
+        id: get_version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $ver = $tag.TrimStart('v')
+          Write-Output "version=$ver" >> $env:GITHUB_OUTPUT
+          Write-Host "Releasing version: $ver"
+
+      - name: Run Production Release Pipeline
+        shell: pwsh
+        run: |
+          .\scripts\build\release.ps1 -Version "${{ steps.get_version.outputs.version }}"
+
+      - name: Create GitHub Release & Upload Artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Release v${{ steps.get_version.outputs.version }}"
+          files: |
+            release/*.zip
+            release/*.exe
+            release/*.sha256
+            release/update-manifest.json
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

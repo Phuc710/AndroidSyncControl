@@ -65,3 +65,43 @@ Tài liệu này định nghĩa các nguyên tắc cốt lõi mang tính **bất
 - **Cấm:**
   - Không hardcode màu sắc trực tiếp (`#FF0000`, `White`, `Black`) trong các thẻ XAML; mọi màu sắc và brush phải dùng `DynamicResource` liên kết với theme (`Themes/Dark.xaml`, `Themes/Light.xaml`).
   - Không hardcode chuỗi text hiển thị; toàn bộ nhãn và thông báo phải bind qua `Localization/Strings.xaml`.
+
+---
+
+## 🛑 KR-08: Chuẩn Hoàn Tất Toàn Diện Subsystem (Subsystem Completeness, Test & Audit Trail)
+- **Quy định:** Mọi tính năng, module, hoặc subsystem mới khi triển khai hoặc tái cấu trúc (refactor) xong **bắt buộc phải thỏa mãn trọn vẹn 6 trụ cột cốt tử** trước khi coi là hoàn thành:
+
+```text
+KR-08 Checklist
+│
+├── 01. Documentation
+│     └── docs/XX-feature.md (Mô tả chi tiết triết lý, thiết kế, cấu trúc)
+│
+├── 02. Architecture
+│     └── docs/02-architecture.md (Cập nhật sơ đồ phân tầng và cây thư mục dự án)
+│
+├── 03. Usage
+│     └── Quickstart / API example (Cú pháp gọi 1 dòng code dễ dùng, dễ hiểu)
+│
+├── 04. Quality Gate
+│     └── Test Suite + Evaluation (xUnit unit tests + SC-11 test cases pass 100%)
+│
+├── 05. Audit Trail
+│     └── Decision / Experience / Result (DecisionRecord, Experience, AgentExecutionResult minh bạch)
+│
+└── 06. Agent Rule
+      └── .agents/GEMINI.md (Đồng bộ quy chuẩn vào context chỉ đạo của Agent)
+```
+
+- **Mục tiêu tối thượng (5 Câu hỏi tự giải thích):** Bất kỳ ai (Kỹ sư người thật hay Agent kế thừa) nhìn vào subsystem đều phải trả lời được ngay 5 câu hỏi:
+  1. **Nó là gì?** (Khái niệm, phạm vi trách nhiệm).
+  2. **Tại sao tồn tại?** (Bài toán thực tế nó giải quyết, triết lý thiết kế).
+  3. **Dùng nó thế nào?** (Cú pháp API tinh gọn, copy-paste chạy được ngay).
+  4. **Làm sao biết nó hoạt động đúng?** (Bằng chứng test, pass rate, Quality Gate).
+  5. **Tại sao Agent lại chọn cách này?** (Audit Trail qua `DecisionRecord` và `MatchEvidence`).
+
+- **Cấm:**
+  - Tuyệt đối không bàn giao code khi thiếu bất kỳ trụ cột nào trong 6 trụ cột trên.
+  - Không viết code "chạy được một lần rồi thôi" mà không có Audit Trail và Test Suite kiểm chứng lặp lại.
+- **Hệ quả vi phạm:** Bị coi là bàn giao mã nguồn rác (Incomplete Code Delivery), phá vỡ tính minh bạch và khả năng tái sử dụng của toàn bộ hệ sinh thái Agent.
+

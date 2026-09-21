@@ -6,6 +6,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{9B343908-798
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AndroidSyncControl", "src\AndroidSyncControl\AndroidSyncControl.csproj", "{7B5D1CC4-5EBF-4E42-9142-32D7DE2D8F38}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AndroidSyncControl.Updater", "src\AndroidSyncControl.Updater\AndroidSyncControl.Updater.csproj", "{E4C20815-5BD7-40A1-8895-B33CDA184D7C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{29A4D0BB-86F4-4308-9E28-EF10B76A63A9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AndroidSyncControl.Tests", "tests\AndroidSyncControl.Tests\AndroidSyncControl.Tests.csproj", "{ACF106CC-7916-492E-B46F-890E0D485338}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -19,8 +25,18 @@ Global
 		{7B5D1CC4-5EBF-4E42-9142-32D7DE2D8F38}.Debug|Any CPU.Build.0 = Debug|x64
 		{7B5D1CC4-5EBF-4E42-9142-32D7DE2D8F38}.Release|Any CPU.ActiveCfg = Release|x64
 		{7B5D1CC4-5EBF-4E42-9142-32D7DE2D8F38}.Release|Any CPU.Build.0 = Release|x64
+		{E4C20815-5BD7-40A1-8895-B33CDA184D7C}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{E4C20815-5BD7-40A1-8895-B33CDA184D7C}.Debug|Any CPU.Build.0 = Debug|x64
+		{E4C20815-5BD7-40A1-8895-B33CDA184D7C}.Release|Any CPU.ActiveCfg = Release|x64
+		{E4C20815-5BD7-40A1-8895-B33CDA184D7C}.Release|Any CPU.Build.0 = Release|x64
+		{ACF106CC-7916-492E-B46F-890E0D485338}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ACF106CC-7916-492E-B46F-890E0D485338}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ACF106CC-7916-492E-B46F-890E0D485338}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ACF106CC-7916-492E-B46F-890E0D485338}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{7B5D1CC4-5EBF-4E42-9142-32D7DE2D8F38} = {9B343908-7988-4B7A-A5A4-C6C7F9582082}
+		{E4C20815-5BD7-40A1-8895-B33CDA184D7C} = {9B343908-7988-4B7A-A5A4-C6C7F9582082}
+		{ACF106CC-7916-492E-B46F-890E0D485338} = {29A4D0BB-86F4-4308-9E28-EF10B76A63A9}
 	EndGlobalSection
 EndGlobal

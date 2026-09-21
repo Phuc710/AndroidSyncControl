@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Builds the AndroidSyncControl solution.
+    Runs the automated test suites for AndroidSyncControl.
 #>
 param(
     [string]$Configuration = "Release"
@@ -11,13 +11,12 @@ $rootDir = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 Set-Location $rootDir
 
 Write-Host "==========================================" -ForegroundColor Cyan
-Write-Host " Building AndroidSyncControl ($Configuration)..." -ForegroundColor Cyan
+Write-Host " Running Tests ($Configuration)..." -ForegroundColor Cyan
 Write-Host "==========================================" -ForegroundColor Cyan
 
-dotnet build AndroidSyncControl.sln -c $Configuration
-
+dotnet test AndroidSyncControl.sln -c $Configuration --logger "console;verbosity=normal"
 if ($LASTEXITCODE -ne 0) {
-    Write-Error "Build failed with exit code $LASTEXITCODE"
+    Write-Error "Tests failed with exit code $LASTEXITCODE"
 }
 
-Write-Host "Build completed successfully." -ForegroundColor Green
+Write-Host "All tests passed successfully!" -ForegroundColor Green

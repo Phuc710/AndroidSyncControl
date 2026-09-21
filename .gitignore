@@ -1,6 +1,8 @@
 # .NET build outputs
 bin/
 obj/
+dist/
+release/
 *.user
 *.suo
 .vs/

@@ -1,19 +1,22 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
-using AndroidSyncControl.Localization;
-using AndroidSyncControl.Themes;
+using AndroidSyncControl.Infrastructure;
+using AndroidSyncControl.Update;
 
 namespace AndroidSyncControl
 {
     public partial class App : Application
     {
+        public static UpdateService UpdateService { get; } = new();
+
         private void Application_DispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
         {
             try
             {
-                File.AppendAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "crash.log"),
-                    $"[{DateTime.Now:HH:mm:ss.fff}] DispatcherUnhandledException: {e.Exception}\r\n");
+                File.AppendAllText(AppPaths.GetLogFilePath("crash.log"),
+                    $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] DispatcherUnhandledException: {e.Exception}\r\n");
             }
             catch { }
             e.Handled = true;
@@ -21,41 +24,39 @@ namespace AndroidSyncControl
 
         protected override void OnStartup(StartupEventArgs e)
         {
-            AppDomain.CurrentDomain.UnhandledException += (s, ev) =>
-            {
-                try
-                {
-                    File.AppendAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug_scrcpy.log"),
-                        $"[{DateTime.Now:HH:mm:ss.fff}] [App] UnhandledException: {ev.ExceptionObject}\r\n");
-                }
-                catch { }
-            };
+            bool ok = ApplicationBootstrapper.Run(e.Args);
 
-            AppDomain.CurrentDomain.ProcessExit += (s, ev) =>
+            if (ApplicationBootstrapper.IsHealthCheckMode)
             {
-                try
-                {
-                    File.AppendAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug_scrcpy.log"),
-                        $"[{DateTime.Now:HH:mm:ss.fff}] [App] ProcessExit triggered!\r\n");
-                }
-                catch { }
-            };
-
-            try
-            {
-                ThemeManager.Apply(ThemeManager.Parse(Singleton.Setting.Setting.Theme));
-                LanguageManager.Apply(LanguageManager.Parse(Singleton.Setting.Setting.Language));
+                // Health check verification mode requested by updater
+                Environment.Exit(ok ? 0 : 1);
+                return;
             }
-            catch { }
+
             base.OnStartup(e);
+
+            // Trigger non-blocking background update check after UI is up
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    // Delay 3 seconds after startup to keep startup time ultra-fast
+                    await Task.Delay(3000);
+
+                    // Check update manifest if configured
+                    // (Default fallback can be GitHub Releases or setting.json)
+                    // var manifest = await UpdateService.CheckForUpdateAsync("https://raw.githubusercontent.com/.../update-manifest.json");
+                }
+                catch { }
+            });
         }
 
         protected override void OnExit(ExitEventArgs e)
         {
             try
             {
-                File.AppendAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug_scrcpy.log"),
-                    $"[{DateTime.Now:HH:mm:ss.fff}] [App] Application.OnExit fired! ExitCode={e.ApplicationExitCode}\r\n");
+                File.AppendAllText(AppPaths.GetLogFilePath("app.log"),
+                    $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [App] Application.OnExit fired! ExitCode={e.ApplicationExitCode}\r\n");
             }
             catch { }
             base.OnExit(e);

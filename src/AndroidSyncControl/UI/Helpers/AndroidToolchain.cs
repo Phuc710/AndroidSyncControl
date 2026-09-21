@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using AndroidSyncControl.Infrastructure;
 
 namespace AndroidSyncControl.UI.Helpers
 {
@@ -41,40 +42,52 @@ namespace AndroidSyncControl.UI.Helpers
 
         private static string ResolveAdb()
         {
-            string baseDir = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\', '/');
-            var dir = new DirectoryInfo(baseDir);
+            // 1. Production Runtime layout: <AppDir>/Runtime/adb/adb.exe or <AppDir>/Runtime/adb.exe
+            string runtimeSub = Path.Combine(AppPaths.RuntimeDir, "adb", "adb.exe");
+            if (File.Exists(runtimeSub)) return Path.GetFullPath(runtimeSub);
 
+            string runtimeFlat = Path.Combine(AppPaths.RuntimeDir, "adb.exe");
+            if (File.Exists(runtimeFlat)) return Path.GetFullPath(runtimeFlat);
+
+            // 2. Base directory layout
+            string appDirAdb = Path.Combine(AppPaths.AppDir, "adb.exe");
+            if (File.Exists(appDirAdb)) return Path.GetFullPath(appDirAdb);
+
+            // 3. Dev repo structure: walk up to find tools/android/adb/adb.exe
+            var dir = new DirectoryInfo(AppPaths.AppDir);
             while (dir != null)
             {
-                string target = Path.Combine(dir.FullName, "tools", "android", "adb", "adb.exe");
-                if (File.Exists(target)) return Path.GetFullPath(target);
+                string devTarget = Path.Combine(dir.FullName, "tools", "android", "adb", "adb.exe");
+                if (File.Exists(devTarget)) return Path.GetFullPath(devTarget);
 
                 dir = dir.Parent;
             }
-
-            // Local fallback
-            string localAdb = Path.Combine(baseDir, "adb.exe");
-            if (File.Exists(localAdb)) return localAdb;
 
             return "adb.exe";
         }
 
         private static string ResolveScrcpy()
         {
-            string baseDir = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\', '/');
-            var dir = new DirectoryInfo(baseDir);
+            // 1. Production Runtime layout: <AppDir>/Runtime/scrcpy/scrcpy.exe or <AppDir>/Runtime/scrcpy.exe
+            string runtimeSub = Path.Combine(AppPaths.RuntimeDir, "scrcpy", "scrcpy.exe");
+            if (File.Exists(runtimeSub)) return Path.GetFullPath(runtimeSub);
 
+            string runtimeFlat = Path.Combine(AppPaths.RuntimeDir, "scrcpy.exe");
+            if (File.Exists(runtimeFlat)) return Path.GetFullPath(runtimeFlat);
+
+            // 2. Base directory layout
+            string appDirScrcpy = Path.Combine(AppPaths.AppDir, "scrcpy.exe");
+            if (File.Exists(appDirScrcpy)) return Path.GetFullPath(appDirScrcpy);
+
+            // 3. Dev repo structure: walk up to find tools/android/scrcpy/scrcpy.exe
+            var dir = new DirectoryInfo(AppPaths.AppDir);
             while (dir != null)
             {
-                string target = Path.Combine(dir.FullName, "tools", "android", "scrcpy", "scrcpy.exe");
-                if (File.Exists(target)) return Path.GetFullPath(target);
+                string devTarget = Path.Combine(dir.FullName, "tools", "android", "scrcpy", "scrcpy.exe");
+                if (File.Exists(devTarget)) return Path.GetFullPath(devTarget);
 
                 dir = dir.Parent;
             }
-
-            // Local fallback
-            string localScrcpy = Path.Combine(baseDir, "scrcpy.exe");
-            if (File.Exists(localScrcpy)) return localScrcpy;
 
             return "scrcpy.exe";
         }

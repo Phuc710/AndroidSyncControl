@@ -20,7 +20,9 @@ ROOT_Shopee/
 │   ├── rules/
 │   │   ├── 01-csharp-wpf-architecture.md # Tiêu chuẩn C# .NET 8, MVVM, DynamicResource, Win32 P/Invoke
 │   │   ├── 02-adb-telemetry-safety.md    # Bề mặt phát hiện Shopee & quy chuẩn an toàn ADB
-│   │   └── 03-keeprule.md                # Bộ Keeprules bất biến KR-01 đến KR-07
+│   │   ├── 03-keeprule.md                # Bộ Keeprules bất biến KR-01 đến KR-08
+│   │   ├── 04-senior-code-standards.md   # Chuẩn kỹ sư SC-11 Verified Knowledge & Workflow
+│   │   └── INTELLIGENT EXECUTION.md      # Chuẩn SC-12 Intelligent Decision & Real-World Execution
 │   └── skills/
 │       ├── shopee-bypass-engine/       # Điều phối pipeline bypass M02/D02/L01
 │       ├── scrcpy-wpf-embed/           # Kỹ thuật nhúng HWND SDL2 & tuning video encoder
@@ -29,6 +31,15 @@ ROOT_Shopee/
 │       └── xposed-setup/               # (Root route) Cẩm nang TWRP/Magisk/LSPosed
 ├── src/
 │   └── AndroidSyncControl/             # C# WPF Native Desktop Application
+│       ├── Agent/                      # Subsystem tự học & thực thi thông minh (SC-11 & SC-12)
+│       │   ├── Domain/                 # Playbook, Experience, TestCase, EvaluationReport
+│       │   ├── Abstractions/           # IPlaybookMatcher, IPlaybookEvaluator, IAgentReflector...
+│       │   ├── Matching/               # Bm25PlaybookMatcher, Bm25Index
+│       │   ├── Learning/               # AgentReflector, PlaybookOptimizer
+│       │   ├── Evaluation/             # PlaybookEvaluator (Quality Gate 4 trọng số)
+│       │   ├── Execution/              # AndroidActionEngine, PlaybookExecutor
+│       │   ├── Repository/             # JsonPlaybookRepository (agent-data/)
+│       │   └── Orchestration/          # AgentOrchestrator
 │       ├── UI/
 │       │   ├── Controls/               # ShopeeSidebar.xaml, NumericUpDown.cs
 │       │   ├── Helpers/                # AndroidToolchain, Supervisor, BypassService, ScrcpyProfile
@@ -45,7 +56,7 @@ ROOT_Shopee/
 │   ├── build/build.ps1                 # Biên dịch Release
 │   ├── dev/run.ps1                     # Chạy môi trường Dev
 │   └── setup/setup.ps1                 # Kiểm tra môi trường kết nối
-├── docs/                               # 01-user-guide, 02-architecture, 03-bypass-mechanism, 04-troubleshooting
+├── docs/                               # 01-user-guide, 02-architecture, 03-bypass-mechanism, 04-troubleshooting, 05-agent-learning-system
 ├── run.bat / sync_control.bat          # 1-Click Launchers
 └── AndroidSyncControl.sln              # Visual Studio Solution duy nhất
 ```
