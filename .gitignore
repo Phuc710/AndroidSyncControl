@@ -3,6 +3,7 @@ bin/
 obj/
 dist/
 release/
+tools/nsis/
 *.user
 *.suo
 .vs/

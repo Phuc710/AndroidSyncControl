@@ -253,6 +253,7 @@ if (-not $SkipSign) {
 if (-not $SkipInstaller) {
     $nsisPath = $null
     $possibleNsis = @(
+        (Join-Path $rootDir "tools\nsis\makensis.exe"),
         "makensis.exe",
         "${env:ProgramFiles(x86)}\NSIS\makensis.exe",
         "${env:ProgramFiles}\NSIS\makensis.exe"
