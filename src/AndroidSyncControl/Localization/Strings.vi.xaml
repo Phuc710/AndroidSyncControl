@@ -1,0 +1,43 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+    <!-- ================= Title bar ================= -->
+    <sys:String x:Key="Str.Btn.About">Giới thiệu</sys:String>
+    <sys:String x:Key="Str.Tip.Minimize">Thu nhỏ</sys:String>
+    <sys:String x:Key="Str.Tip.Maximize">Phóng to</sys:String>
+    <sys:String x:Key="Str.Tip.Close">Đóng</sys:String>
+
+    <!-- Theme button tooltip (set from code-behind) -->
+    <sys:String x:Key="Str.Theme.Light">Giao diện: Sáng (bấm để đổi)</sys:String>
+    <sys:String x:Key="Str.Theme.Dark">Giao diện: Tối (bấm để đổi)</sys:String>
+    <sys:String x:Key="Str.Theme.System">Giao diện: Theo hệ thống (bấm để đổi)</sys:String>
+
+    <!-- ================= Toolbar ================= -->
+    <sys:String x:Key="Str.Toolbar.Device">Thiết bị</sys:String>
+    <sys:String x:Key="Str.Combo.SelectDevice">Chọn thiết bị…</sys:String>
+    <sys:String x:Key="Str.Btn.ShowMain">Hiện chính</sys:String>
+    <sys:String x:Key="Str.Btn.ShowListView">Hiện ở lưới</sys:String>
+    <sys:String x:Key="Str.Btn.ShowAllListView">Hiện tất cả ở lưới</sys:String>
+    <sys:String x:Key="Str.Toolbar.Size">Kích thước</sys:String>
+    <sys:String x:Key="Str.Toolbar.MaxFps">MaxFps</sys:String>
+    <sys:String x:Key="Str.Toolbar.MaxSize">MaxSize</sys:String>
+    <sys:String x:Key="Str.Toolbar.Gpu">GPU</sys:String>
+    <sys:String x:Key="Str.Toolbar.Audio">Âm thanh</sys:String>
+
+    <sys:String x:Key="Str.Tip.MaxFps">Giới hạn FPS tối đa của video (hiệu lực 1–120). Áp dụng khi kết nối lại.</sys:String>
+    <sys:String x:Key="Str.Tip.MaxSize">Giới hạn cạnh dài nhất của video (px, bội số 8). Dưới 360 = không giới hạn (kích thước gốc). Áp dụng khi kết nối lại.</sys:String>
+    <sys:String x:Key="Str.Tip.Gpu">Bật: dùng GPU giải mã (D3D11VA). Tắt: dùng CPU (none). Áp dụng khi kết nối lại.</sys:String>
+    <sys:String x:Key="Str.Tip.Audio">Bật: nhận và giải mã luồng âm thanh từ thiết bị. Áp dụng khi kết nối lại.</sys:String>
+
+    <!-- ================= Device panels ================= -->
+    <sys:String x:Key="Str.Btn.Disconnect">Ngắt</sys:String>
+    <sys:String x:Key="Str.Check.Sync">Đồng bộ</sys:String>
+    <sys:String x:Key="Str.Check.Speaker">Loa</sys:String>
+    <sys:String x:Key="Str.Tip.Speaker">Bật: phát âm thanh thiết bị ra loa PC. Tắt: không phát (bỏ qua dòng âm thanh).</sys:String>
+
+    <!-- ================= About dialog ================= -->
+    <sys:String x:Key="Str.About.Title">Giới thiệu</sys:String>
+    <sys:String x:Key="Str.About.Body">Android Sync Control&#x0A;&#x0A;Phản chiếu &amp; điều khiển nhiều thiết bị Android.&#x0A;Sử dụng scrcpy.</sys:String>
+
+</ResourceDictionary>

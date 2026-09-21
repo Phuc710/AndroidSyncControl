@@ -1,0 +1,10 @@
+{
+  "ViewPercent": 25.0,
+  "MaxFps": 30,
+  "MaxSize": 0,
+  "Timeout": 8000,
+  "UseGpu": false,
+  "IsAudio": false,
+  "Theme": "Dark",
+  "Language": "vi"
+}

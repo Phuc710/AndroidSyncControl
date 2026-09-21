@@ -1,0 +1,362 @@
+<UserControl x:Class="AndroidSyncControl.UI.Controls.ShopeeSidebar"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="780" d:DesignWidth="185"
+             Background="#FFFFFF"
+             FontFamily="Segoe UI" FontSize="12.5"
+             Loaded="ShopeeSidebar_Loaded">
+
+    <UserControl.Resources>
+        <!-- Clean minimal sidebar button style matching the reference image -->
+        <Style x:Key="SidebarBtn" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#334155"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Padding" Value="8,0"/>
+            <Setter Property="Height" Value="29"/>
+            <Setter Property="Margin" Value="2,1"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4" Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter x:Name="contentPresenter"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsEnabled" Value="True"/>
+                                    <Condition Property="IsKeyboardFocused" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#93C5FD"/>
+                                <Setter TargetName="border" Property="Background" Value="#F8FAFC"/>
+                            </MultiTrigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsEnabled" Value="True"/>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="border" Property="Background" Value="#F1F5F9"/>
+                            </MultiTrigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsEnabled" Value="True"/>
+                                    <Condition Property="IsPressed" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="border" Property="Background" Value="#E2E8F0"/>
+                            </MultiTrigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Cursor" Value="Arrow"/>
+                                <Setter TargetName="border" Property="Background" Value="Transparent"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="Transparent"/>
+                                <Setter TargetName="contentPresenter" Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Action Button for Paste/Send next to textbox -->
+        <Style x:Key="ActionGreenBtn" TargetType="Button">
+            <Setter Property="Background" Value="#10B981"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#10B981"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bdr" Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4" SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsEnabled" Value="True"/>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="bdr" Property="Background" Value="#059669"/>
+                                <Setter TargetName="bdr" Property="BorderBrush" Value="#059669"/>
+                            </MultiTrigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsEnabled" Value="True"/>
+                                    <Condition Property="IsPressed" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="bdr" Property="Background" Value="#047857"/>
+                                <Setter TargetName="bdr" Property="BorderBrush" Value="#047857"/>
+                            </MultiTrigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Cursor" Value="Arrow"/>
+                                <Setter TargetName="bdr" Property="Background" Value="#F3F4F6"/>
+                                <Setter TargetName="bdr" Property="BorderBrush" Value="#E5E7EB"/>
+                                <Setter Property="Foreground" Value="#9CA3AF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Navigation bottom bar button -->
+        <Style x:Key="NavBtn" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bdr" Background="{TemplateBinding Background}" CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsEnabled" Value="True"/>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="bdr" Property="Background" Value="#F1F5F9"/>
+                            </MultiTrigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsEnabled" Value="True"/>
+                                    <Condition Property="IsPressed" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="bdr" Property="Background" Value="#E2E8F0"/>
+                            </MultiTrigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Section Label Style: clean, small uppercase -->
+        <Style x:Key="SectionLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#94A3B8"/>
+            <Setter Property="Margin" Value="10,10,10,3"/>
+        </Style>
+
+        <!-- Thin subtle divider between sections -->
+        <Style x:Key="SectionDivider" TargetType="Border">
+            <Setter Property="Height" Value="1"/>
+            <Setter Property="Background" Value="#F1F5F9"/>
+            <Setter Property="Margin" Value="10,6,10,6"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Border BorderBrush="#E2E8F0" BorderThickness="1,0,0,0">
+        <Grid Background="#FFFFFF">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Header: Device Name ● Connected -->
+                <RowDefinition Height="*"/>    <!-- Scrollable action items -->
+                <RowDefinition Height="Auto"/> <!-- Status strip -->
+                <RowDefinition Height="Auto"/> <!-- Bottom Android Navigation Bar -->
+            </Grid.RowDefinitions>
+
+            <!-- 1. Connection Status Header -->
+            <Border Grid.Row="0" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="12,10" Background="#FAFAFA">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <!-- Device Model Name -->
+                    <TextBlock x:Name="txtDeviceName" Text="No Device Connected" FontSize="12.5" FontWeight="SemiBold" 
+                               Foreground="#1E293B" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                    
+                    <!-- Connection Status Dot & Text -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Ellipse x:Name="dotConnection" Width="7" Height="7" Fill="#10B981" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                        <TextBlock x:Name="txtConnectionState" Text="Connected" FontSize="11" FontWeight="Medium" 
+                                   Foreground="#64748B" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- 2. Action Tools List -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Orientation="Vertical" Margin="4,4">
+
+                    <!-- SECTION: DEVICE -->
+                    <TextBlock Text="DEVICE" Style="{StaticResource SectionLabel}"/>
+                    
+                    <Button x:Name="btn_info" Style="{StaticResource SidebarBtn}" Click="btn_info_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#64748B"/>
+                            <TextBlock Text="Phone Info" VerticalAlignment="Center" Foreground="#334155"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="btn_power" Style="{StaticResource SidebarBtn}" Click="btn_power_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE7E8;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#64748B"/>
+                            <TextBlock Text="Power" VerticalAlignment="Center" Foreground="#334155"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="btn_reboot" Style="{StaticResource SidebarBtn}" Click="btn_reboot_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#64748B"/>
+                            <TextBlock Text="Reboot" VerticalAlignment="Center" Foreground="#334155"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="btn_screenshot" Style="{StaticResource SidebarBtn}" Click="btn_screenshot_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE722;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#64748B"/>
+                            <TextBlock Text="Screenshot" VerticalAlignment="Center" Foreground="#334155"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Border Style="{StaticResource SectionDivider}"/>
+
+                    <!-- SECTION: CLIPBOARD -->
+                    <TextBlock Text="CLIPBOARD" Style="{StaticResource SectionLabel}"/>
+
+                    <Button x:Name="btn_paste_direct" Style="{StaticResource SidebarBtn}" Click="btn_paste_direct_Click"
+                            ToolTip="Dán nội dung sang điện thoại ngay lập tức">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE77F;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#64748B"/>
+                            <TextBlock Text="Paste" VerticalAlignment="Center" FontWeight="Medium" Foreground="#334155"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Input textbox + send button -->
+                    <Grid Margin="6,2,6,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="txt_input" Height="26" Padding="6,2" FontSize="12" 
+                                 Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="1"
+                                 VerticalContentAlignment="Center"
+                                 KeyDown="txt_input_KeyDown"
+                                 GotFocus="txt_input_GotFocus"
+                                 ToolTip="Nhập text và nhấn Enter hoặc bấm icon bên cạnh"/>
+                        <Button Grid.Column="1" x:Name="btn_send_text" Style="{StaticResource ActionGreenBtn}"
+                                Width="26" Height="26" Margin="3,0,0,0"
+                                Click="btn_send_text_Click" ToolTip="Dán vào điện thoại (Send)">
+                            <TextBlock Text="&#xE77F;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="White"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Button>
+                    </Grid>
+
+                    <Border Style="{StaticResource SectionDivider}"/>
+
+                    <!-- SECTION: FILES -->
+                    <TextBlock Text="FILES" Style="{StaticResource SectionLabel}"/>
+
+                    <Button x:Name="btn_install_apk" Style="{StaticResource SidebarBtn}" Click="btn_install_apk_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE896;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#64748B"/>
+                            <TextBlock Text="Install APK" VerticalAlignment="Center" Foreground="#334155"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="btn_backup_restore" Style="{StaticResource SidebarBtn}" Click="btn_backup_restore_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE775;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#10B981"/>
+                            <TextBlock Text="Backup / Restore" VerticalAlignment="Center" Foreground="#10B981" FontWeight="Medium"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Border Style="{StaticResource SectionDivider}"/>
+
+                    <!-- SECTION: NETWORK -->
+                    <TextBlock Text="NETWORK" Style="{StaticResource SectionLabel}"/>
+
+                    <Button x:Name="btn_proxy" Style="{StaticResource SidebarBtn}" Click="btn_proxy_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE774;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#2563EB"/>
+                            <TextBlock Text="Fake Proxy" VerticalAlignment="Center" Foreground="#2563EB" FontWeight="Medium"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="btn_adb_cmd" Style="{StaticResource SidebarBtn}" Click="btn_adb_cmd_Click"
+                            ToolTip="Mở ADB Shell terminal">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text=">_" FontFamily="Consolas" FontWeight="Bold" FontSize="12" Width="22" VerticalAlignment="Center" Foreground="#2563EB"/>
+                            <TextBlock Text="ADB Shell" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#1E293B"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="btn_rotate_ip" Style="{StaticResource SidebarBtn}" Click="btn_rotate_ip_Click"
+                            ToolTip="Bật/Tắt Airplane Mode để đổi dải IP 4G">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE709;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#2563EB"/>
+                            <TextBlock Text="Đổi IP (4G)" VerticalAlignment="Center" Foreground="#2563EB" FontWeight="Medium"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Border Style="{StaticResource SectionDivider}"/>
+
+                    <!-- SECTION: SHOPEE -->
+                    <TextBlock Text="SHOPEE" Style="{StaticResource SectionLabel}"/>
+
+                    <Button x:Name="btn_open_shopee" Style="{StaticResource SidebarBtn}" Click="btn_open_shopee_Click"
+                            ToolTip="Mở ứng dụng Shopee trên điện thoại">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE7BF;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#EE4D2D"/>
+                            <TextBlock Text="Open Shopee" VerticalAlignment="Center" Foreground="#EE4D2D" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="btn_bypass" Style="{StaticResource SidebarBtn}" Click="btn_bypass_Click"
+                            ToolTip="Bypass Shopee sạch: Xóa token, đổi SSAID, reset GAID, xoay IP 4G">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="⚡" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#EE4D2D"/>
+                            <TextBlock Text="Bypass Shopee" FontWeight="Bold" VerticalAlignment="Center" Foreground="#EE4D2D"/>
+                        </StackPanel>
+                    </Button>
+
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Status Indicator Strip -->
+            <Border Grid.Row="2" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="10,4">
+                <TextBlock x:Name="txt_status" Text="Ready" FontSize="11" Foreground="#10B981" FontWeight="SemiBold"
+                           TextTrimming="CharacterEllipsis"/>
+            </Border>
+
+            <!-- Bottom Android Navigation Bar: [ ≡ ] [ ⌂ ] [ ← ] -->
+            <Border Grid.Row="3" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Background="#FAFAFA" Padding="4,2">
+                <UniformGrid Columns="3">
+                    <Button x:Name="btn_nav_menu" Style="{StaticResource NavBtn}" Click="btn_nav_menu_Click" ToolTip="Recent Apps (≡)">
+                        <TextBlock Text="&#xE700;" FontFamily="Segoe MDL2 Assets" FontSize="15" Foreground="#475569"/>
+                    </Button>
+                    <Button x:Name="btn_nav_home" Style="{StaticResource NavBtn}" Click="btn_nav_home_Click" ToolTip="Home (⌂)">
+                        <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="15" Foreground="#475569"/>
+                    </Button>
+                    <Button x:Name="btn_nav_back" Style="{StaticResource NavBtn}" Click="btn_nav_back_Click" ToolTip="Back (←)">
+                        <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="15" Foreground="#475569"/>
+                    </Button>
+                </UniformGrid>
+            </Border>
+        </Grid>
+    </Border>
+</UserControl>

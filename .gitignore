@@ -1,0 +1,23 @@
+# .NET build outputs
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env/
+
+# Logs
+*.log
+crash.log
+debug_scrcpy.log
+
+# OS generated
+Thumbs.db
+Desktop.ini
+.DS_Store

@@ -1,0 +1,21 @@
+<Application x:Class="AndroidSyncControl.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:AndroidSyncControl"
+             StartupUri="UI/MainWindow.xaml"
+             DispatcherUnhandledException="Application_DispatcherUnhandledException">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- Swappable color palette (index 0). Default = Dark; replaced at
+                     startup / toggle by ThemeManager. -->
+                <ResourceDictionary Source="Themes/Colors.Dark.xaml"/>
+                <!-- Swappable UI string table. Default = English; replaced at
+                     startup / selection by LanguageManager. -->
+                <ResourceDictionary Source="Localization/Strings.en.xaml"/>
+                <!-- Control styles referencing the palette via DynamicResource. -->
+                <ResourceDictionary Source="Themes/Controls.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

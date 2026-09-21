@@ -1,0 +1,43 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+    <!-- ================= Title bar ================= -->
+    <sys:String x:Key="Str.Btn.About">About</sys:String>
+    <sys:String x:Key="Str.Tip.Minimize">Minimize</sys:String>
+    <sys:String x:Key="Str.Tip.Maximize">Maximize</sys:String>
+    <sys:String x:Key="Str.Tip.Close">Close</sys:String>
+
+    <!-- Theme button tooltip (set from code-behind) -->
+    <sys:String x:Key="Str.Theme.Light">Theme: Light (click to change)</sys:String>
+    <sys:String x:Key="Str.Theme.Dark">Theme: Dark (click to change)</sys:String>
+    <sys:String x:Key="Str.Theme.System">Theme: System (click to change)</sys:String>
+
+    <!-- ================= Toolbar ================= -->
+    <sys:String x:Key="Str.Toolbar.Device">Device</sys:String>
+    <sys:String x:Key="Str.Combo.SelectDevice">Select device…</sys:String>
+    <sys:String x:Key="Str.Btn.ShowMain">Show Main</sys:String>
+    <sys:String x:Key="Str.Btn.ShowListView">Show ListView</sys:String>
+    <sys:String x:Key="Str.Btn.ShowAllListView">Show All in ListView</sys:String>
+    <sys:String x:Key="Str.Toolbar.Size">Size</sys:String>
+    <sys:String x:Key="Str.Toolbar.MaxFps">MaxFps</sys:String>
+    <sys:String x:Key="Str.Toolbar.MaxSize">MaxSize</sys:String>
+    <sys:String x:Key="Str.Toolbar.Gpu">GPU</sys:String>
+    <sys:String x:Key="Str.Toolbar.Audio">Audio</sys:String>
+
+    <sys:String x:Key="Str.Tip.MaxFps">Limit the video's maximum FPS (effective 1–120). Applied on reconnect.</sys:String>
+    <sys:String x:Key="Str.Tip.MaxSize">Limit the video's longest edge (px, multiple of 8). Below 360 = unlimited (native size). Applied on reconnect.</sys:String>
+    <sys:String x:Key="Str.Tip.Gpu">On: GPU decoding (D3D11VA). Off: CPU (none). Applied on reconnect.</sys:String>
+    <sys:String x:Key="Str.Tip.Audio">On: receive and decode the device's audio stream. Applied on reconnect.</sys:String>
+
+    <!-- ================= Device panels ================= -->
+    <sys:String x:Key="Str.Btn.Disconnect">Disconnect</sys:String>
+    <sys:String x:Key="Str.Check.Sync">Sync</sys:String>
+    <sys:String x:Key="Str.Check.Speaker">Speaker</sys:String>
+    <sys:String x:Key="Str.Tip.Speaker">On: play device audio through PC speakers. Off: muted (audio stream skipped).</sys:String>
+
+    <!-- ================= About dialog ================= -->
+    <sys:String x:Key="Str.About.Title">About</sys:String>
+    <sys:String x:Key="Str.About.Body">Android Sync Control&#x0A;&#x0A;Multi-device Android mirror &amp; control.&#x0A;Powered by scrcpy.</sys:String>
+
+</ResourceDictionary>

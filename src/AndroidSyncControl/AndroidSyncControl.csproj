@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net8.0-windows</TargetFramework>
+		<LangVersion>latest</LangVersion>
+		<UseWPF>true</UseWPF>
+		<UseWindowsForms>true</UseWindowsForms>
+		<Platforms>x64</Platforms>
+		<ApplicationIcon>Resources\appicon.ico</ApplicationIcon>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- Embedded so it can also be used as the WPF Window.Icon (taskbar / alt-tab). -->
+		<Resource Include="Resources\appicon.ico" />
+		<Resource Include="Resources\AndroidSyncControl_Icon_1024x1024.png" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="SpicyTaco.AutoGrid" Version="1.2.29" />
+		<PackageReference Include="TqkLibrary.Adb.Runtimes" Version="33.0.2.2" />
+		<PackageReference Include="TqkLibrary.AdbDotNet" Version="1.0.0-build2022070800" />
+		<PackageReference Include="TqkLibrary.WpfUi" Version="1.0.0-build2022050602" />
+	</ItemGroup>
+
+</Project>
