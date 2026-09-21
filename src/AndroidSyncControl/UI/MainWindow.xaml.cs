@@ -142,7 +142,7 @@ namespace AndroidSyncControl.UI
                         btnRetry.IsEnabled = false;
                         wfHost.Visibility = Visibility.Collapsed;
                         overlayPanel.Visibility = Visibility.Visible;
-                        this.Title = "Shopee Control (Khởi tạo...)";
+                        this.Title = "AndroidSyncControl";
                         shopeeSidebar.UpdateConnectionStatus("Android Device", "Initializing...", "#2563EB");
                         break;
 
@@ -157,7 +157,7 @@ namespace AndroidSyncControl.UI
                         btnRetry.IsEnabled = true;
                         wfHost.Visibility = Visibility.Collapsed;
                         overlayPanel.Visibility = Visibility.Visible;
-                        this.Title = "Shopee Control (Chưa kết nối thiết bị)";
+                        this.Title = "AndroidSyncControl";
                         shopeeSidebar.GetCurrentDeviceId = () => string.Empty;
                         shopeeSidebar.UpdateConnectionStatus("Android Device", "Searching...", "#2563EB");
                         break;
@@ -193,7 +193,7 @@ namespace AndroidSyncControl.UI
                     case ConnectionState.Connected:
                         wfHost.Visibility = Visibility.Visible;
                         overlayPanel.Visibility = Visibility.Collapsed;
-                        this.Title = $"{e.DeviceModel} - AndroidSyncControl";
+                        this.Title = "AndroidSyncControl";
                         shopeeSidebar.GetCurrentDeviceId = () => e.DeviceId;
                         shopeeSidebar.UpdateConnectionStatus(e.DeviceModel, "Connected", "#10B981");
                         ResizeScrcpy();
@@ -210,7 +210,7 @@ namespace AndroidSyncControl.UI
                         btnRetry.IsEnabled = true;
                         wfHost.Visibility = Visibility.Collapsed;
                         overlayPanel.Visibility = Visibility.Visible;
-                        this.Title = "AndroidSyncControl (Mất kết nối)";
+                        this.Title = "AndroidSyncControl";
                         shopeeSidebar.UpdateConnectionStatus("Offline", "Disconnected", "#94A3B8");
                         break;
 
@@ -225,7 +225,7 @@ namespace AndroidSyncControl.UI
                         btnRetry.IsEnabled = true;
                         wfHost.Visibility = Visibility.Collapsed;
                         overlayPanel.Visibility = Visibility.Visible;
-                        this.Title = "AndroidSyncControl (Đang kết nối lại...)";
+                        this.Title = "AndroidSyncControl";
                         shopeeSidebar.UpdateConnectionStatus("Offline", $"Reconnecting ({e.Attempt})", "#F59E0B");
                         break;
 
@@ -238,7 +238,7 @@ namespace AndroidSyncControl.UI
                         btnRetry.IsEnabled = true;
                         wfHost.Visibility = Visibility.Collapsed;
                         overlayPanel.Visibility = Visibility.Visible;
-                        this.Title = "AndroidSyncControl (Lỗi ADB)";
+                        this.Title = "AndroidSyncControl";
                         shopeeSidebar.UpdateConnectionStatus("Offline", "ADB Error", "#EF4444");
                         break;
                 }

@@ -37,12 +37,17 @@ namespace AndroidSyncControl.UI.Helpers
         public static DeviceConnectionSupervisor Instance => _instance.Value;
 
         public event EventHandler<ConnectionStateChangedEventArgs> StateChanged;
+        public event EventHandler<(int width, int height)> DeviceResolutionChanged;
 
         private ConnectionState _currentState = ConnectionState.Initializing;
         public ConnectionState CurrentState => _currentState;
 
         public string ActiveDeviceId { get; private set; } = string.Empty;
         public string ActiveDeviceModel { get; private set; } = string.Empty;
+
+        public int DeviceScreenWidth { get; private set; } = 720;
+        public int DeviceScreenHeight { get; private set; } = 1280;
+        public double DeviceAspectRatio => DeviceScreenHeight > 0 ? (double)DeviceScreenWidth / DeviceScreenHeight : 9.0 / 16.0;
 
         private CancellationTokenSource _cts;
         private Task _supervisorTask;
@@ -164,6 +169,18 @@ namespace AndroidSyncControl.UI.Helpers
                     {
                         ActiveDeviceModel = await ShopeeBypassService.GetDeviceModelAsync(ActiveDeviceId);
                     }
+
+                    try
+                    {
+                        var (resW, resH) = await ShopeeBypassService.GetDeviceResolutionAsync(ActiveDeviceId);
+                        if (resW > 0 && resH > 0)
+                        {
+                            DeviceScreenWidth = resW;
+                            DeviceScreenHeight = resH;
+                            Log($"Device native resolution: {resW}x{resH} (Ratio: {DeviceAspectRatio:F4})");
+                        }
+                    }
+                    catch { }
 
                     if (reconnectAttempt > 0)
                     {
@@ -328,7 +345,26 @@ namespace AndroidSyncControl.UI.Helpers
                 _scrcpyProc = new Process { StartInfo = psi, EnableRaisingEvents = true };
                 _scrcpyProc.ErrorDataReceived += (s, e) =>
                 {
-                    if (!string.IsNullOrEmpty(e.Data)) stderrLog.AppendLine(e.Data);
+                    if (!string.IsNullOrEmpty(e.Data))
+                    {
+                        stderrLog.AppendLine(e.Data);
+                        try
+                        {
+                            // Detect scrcpy texture resolution updates: "INFO: Texture: 408x720" or "INFO: New texture: 720x1280"
+                            var match = System.Text.RegularExpressions.Regex.Match(e.Data, @"(?:texture|Device:.*)\s*:\s*(?:.*\s+)?(\d+)x(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                            if (match.Success && int.TryParse(match.Groups[1].Value, out int tw) && int.TryParse(match.Groups[2].Value, out int th))
+                            {
+                                if (tw > 0 && th > 0 && (tw != DeviceScreenWidth || th != DeviceScreenHeight))
+                                {
+                                    DeviceScreenWidth = tw;
+                                    DeviceScreenHeight = th;
+                                    Log($"Scrcpy stream texture updated: {tw}x{th} (Ratio: {DeviceAspectRatio:F4})");
+                                    DeviceResolutionChanged?.Invoke(this, (tw, th));
+                                }
+                            }
+                        }
+                        catch { }
+                    }
                 };
 
                 _scrcpyProc.Start();

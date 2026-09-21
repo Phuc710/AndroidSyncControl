@@ -13,7 +13,8 @@
 	<ItemGroup>
 		<!-- Embedded so it can also be used as the WPF Window.Icon (taskbar / alt-tab). -->
 		<Resource Include="Resources\appicon.ico" />
-		<Resource Include="Resources\AndroidSyncControl_Icon_1024x1024.png" />
+		<Resource Include="Resources\phone_connect.png" />
+		<Resource Include="Resources\logo.png" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -6,7 +6,7 @@
         xmlns:wf="clr-namespace:System.Windows.Forms;assembly=System.Windows.Forms"
         xmlns:ctrl="clr-namespace:AndroidSyncControl.UI.Controls"
         mc:Ignorable="d"
-        Title="AndroidSyncControl - Phone Screen &amp; Device Manager" 
+        Title="AndroidSyncControl" 
         Icon="pack://application:,,,/Resources/appicon.ico"
         Height="780" Width="615" MinWidth="480" MinHeight="600"
         WindowStartupLocation="CenterScreen"
@@ -34,20 +34,21 @@
 
             <!-- 2. Clean Minimal White Connection Screen -->
             <Grid x:Name="overlayPanel" Visibility="Visible" Background="#FFFFFF">
-                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="320" Margin="24">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="360" Margin="24">
                     
-                    <!-- Application Logo (64x64, crisp high-quality rendering) -->
-                    <Border Width="64" Height="64" CornerRadius="14" Margin="0,0,0,16" HorizontalAlignment="Center"
-                            ClipToBounds="True" Background="Transparent">
-                        <Image Source="pack://application:,,,/Resources/AndroidSyncControl_Icon_1024x1024.png"
-                               Width="64" Height="64" Stretch="Uniform"
-                               RenderOptions.BitmapScalingMode="HighQuality"/>
-                    </Border>
+                    <!-- Connecting Device 3D Logo / Illustration (180x180 px chuẩn, high-quality rendering) -->
+                    <Image Source="pack://application:,,,/Resources/phone_connect.png"
+                           Width="180" Height="180" Margin="0,0,0,18" HorizontalAlignment="Center"
+                           RenderOptions.BitmapScalingMode="HighQuality">
+                        <Image.Effect>
+                            <DropShadowEffect BlurRadius="24" ShadowDepth="6" Direction="270" Color="#60A5FA" Opacity="0.35"/>
+                        </Image.Effect>
+                    </Image>
 
                     <!-- Title -->
                     <TextBlock x:Name="txtStatusTitle" 
                                Text="Connect your Android device" 
-                               FontSize="16" FontWeight="SemiBold" Foreground="#1E293B" 
+                               FontSize="17" FontWeight="SemiBold" Foreground="#1E293B" 
                                HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,8"/>
 
                     <!-- Description / Instructions -->

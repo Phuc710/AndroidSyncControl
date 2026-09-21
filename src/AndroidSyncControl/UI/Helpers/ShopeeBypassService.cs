@@ -119,6 +119,27 @@ namespace AndroidSyncControl.UI.Helpers
             return "Android Device";
         }
 
+        public static async Task<(int width, int height)> GetDeviceResolutionAsync(string deviceId)
+        {
+            try
+            {
+                string outStr = await RunAdbAsync(deviceId, "shell wm size");
+                foreach (var line in outStr.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    var match = System.Text.RegularExpressions.Regex.Match(line, @"(\d+)\s*x\s*(\d+)");
+                    if (match.Success && int.TryParse(match.Groups[1].Value, out int w) && int.TryParse(match.Groups[2].Value, out int h))
+                    {
+                        if (w > 0 && h > 0)
+                        {
+                            return (w, h);
+                        }
+                    }
+                }
+            }
+            catch { }
+            return (720, 1280);
+        }
+
         public static async Task<string> GetPhoneInfoAsync(string deviceId)
         {
             string androidId = (await RunAdbAsync(deviceId, "shell settings get secure android_id")).Trim();
