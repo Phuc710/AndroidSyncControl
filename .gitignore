@@ -5,6 +5,7 @@ dist/
 release/*
 !release/update-manifest.json
 tools/nsis/
+tools/github/
 *.user
 *.suo
 .vs/
