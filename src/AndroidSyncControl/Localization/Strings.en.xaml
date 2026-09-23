@@ -29,7 +29,7 @@
 
     <!-- ================= Sidebar Sections ================= -->
     <sys:String x:Key="Str.Sec.Device">DEVICE</sys:String>
-    <sys:String x:Key="Str.Sec.Clipboard">CLIPBOARD</sys:String>
+    <sys:String x:Key="Str.Sec.Clipboard">PASTE</sys:String>
     <sys:String x:Key="Str.Sec.Files">FILES</sys:String>
     <sys:String x:Key="Str.Sec.Network">NETWORK</sys:String>
     <sys:String x:Key="Str.Sec.Shopee">SHOPEE</sys:String>
@@ -54,15 +54,21 @@
     <!-- ================= Status Messages ================= -->
     <sys:String x:Key="Str.Status.Ready">Ready</sys:String>
     <sys:String x:Key="Str.Status.Done">Done ✓</sys:String>
+    <sys:String x:Key="Str.Status.Copied">Copied (Ctrl+C) ✓</sys:String>
+    <sys:String x:Key="Str.Status.SelectAll">Select All (Ctrl+A)</sys:String>
     <sys:String x:Key="Str.Status.EmptyClipboard">Clipboard empty</sys:String>
     <sys:String x:Key="Str.Status.NotConnected">Not connected</sys:String>
     <sys:String x:Key="Str.Status.Pasting">Pasting...</sys:String>
     <sys:String x:Key="Str.Status.Capturing">Capturing...</sys:String>
     <sys:String x:Key="Str.Status.Rebooting">Rebooting...</sys:String>
     <sys:String x:Key="Str.Status.Installing">Installing...</sys:String>
+    <sys:String x:Key="Str.Status.InstallingApk">Installing {0} ({1:F1} MB)...</sys:String>
+    <sys:String x:Key="Str.Status.InstallSuccess">Install succeeded ✓</sys:String>
+    <sys:String x:Key="Str.Status.InstallFailed">Install failed: {0}</sys:String>
     <sys:String x:Key="Str.Status.OpeningShopee">Opening Shopee...</sys:String>
     <sys:String x:Key="Str.Status.RotatingIp">Rotating IP...</sys:String>
     <sys:String x:Key="Str.Status.ProxyCleared">Proxy cleared ✓</sys:String>
+    <sys:String x:Key="Str.Status.AdbShellOpening">Opening ADB Shell...</sys:String>
 
     <!-- ================= Dialogs ================= -->
     <sys:String x:Key="Str.Dialog.RebootConfirm">Reboot device?</sys:String>
@@ -70,13 +76,56 @@
     <sys:String x:Key="Str.Dialog.ProxyCurrentPrompt">Proxy: {0}&#x0A;New host:port:</sys:String>
     <sys:String x:Key="Str.Dialog.Apply">Apply</sys:String>
 
+    <!-- ================= Proxy Manager Dialog ================= -->
+    <sys:String x:Key="Str.Proxy.Title">Device Proxy Manager</sys:String>
+    <sys:String x:Key="Str.Proxy.CurrentState">Current status:</sys:String>
+    <sys:String x:Key="Str.Proxy.Direct">Direct (No Proxy)</sys:String>
+    <sys:String x:Key="Str.Proxy.Active">Active: {0}</sys:String>
+    <sys:String x:Key="Str.Proxy.HostLabel">IP Address / Host:</sys:String>
+    <sys:String x:Key="Str.Proxy.PortLabel">Port:</sys:String>
+    <sys:String x:Key="Str.Proxy.DisableBtn">Disable / Clear Proxy</sys:String>
+    <sys:String x:Key="Str.Proxy.ApplyBtn">Apply Proxy</sys:String>
+    <sys:String x:Key="Str.Proxy.TestIpBtn">Test IP</sys:String>
+    <sys:String x:Key="Str.Proxy.Testing">Testing network connection...</sys:String>
+    <sys:String x:Key="Str.Proxy.TestSuccess">Current IP: {0}</sys:String>
+    <sys:String x:Key="Str.Proxy.TestFailed">Cannot connect to internet via this proxy</sys:String>
+
+    <!-- ================= Backup / Restore Dialog ================= -->
+    <sys:String x:Key="Str.Backup.Title">Shopee Backup &amp; Restore</sys:String>
+    <sys:String x:Key="Str.Backup.Desc">Manage backups of Shopee session, account and application data on device.</sys:String>
+    <sys:String x:Key="Str.Backup.CreateBtn">Create New Backup</sys:String>
+    <sys:String x:Key="Str.Backup.ExistingBackups">Saved Backups</sys:String>
+    <sys:String x:Key="Str.Backup.RestoreBtn">Restore</sys:String>
+    <sys:String x:Key="Str.Backup.DeleteBtn">Delete</sys:String>
+    <sys:String x:Key="Str.Backup.OpenFolder">Open Folder</sys:String>
+    <sys:String x:Key="Str.Backup.BackingUp">Backing up Shopee data...</sys:String>
+    <sys:String x:Key="Str.Backup.Restoring">Restoring data to device...</sys:String>
+    <sys:String x:Key="Str.Backup.Success">Backup completed ✓</sys:String>
+    <sys:String x:Key="Str.Backup.RestoreSuccess">Restore completed ✓ Data &amp; SSAID restored.</sys:String>
+    <sys:String x:Key="Str.Backup.NoBackups">No backups found. Click 'Create New Backup' to save current session.</sys:String>
+    <sys:String x:Key="Str.Backup.ConfirmRestore">Are you sure you want to restore this backup?&#x0A;Current Shopee data on device will be replaced.</sys:String>
+    <sys:String x:Key="Str.Backup.ConfirmDelete">Do you want to delete this backup?</sys:String>
+
+    <!-- ================= ADB Smart Console ================= -->
+    <sys:String x:Key="Str.Adb.Title">ADB Smart Console &amp; Automation</sys:String>
+    <sys:String x:Key="Str.Adb.Subtitle">Execute shell commands and automation scripts on Android device</sys:String>
+    <sys:String x:Key="Str.Adb.RunBtn">Run Command</sys:String>
+    <sys:String x:Key="Str.Adb.ClearBtn">Clear Console</sys:String>
+    <sys:String x:Key="Str.Adb.OpenCmdBtn">Open CMD Shell</sys:String>
+    <sys:String x:Key="Str.Adb.CopyBtn">Copy Output</sys:String>
+    <sys:String x:Key="Str.Adb.PresetLabel">Quick Presets &amp; Scripts:</sys:String>
+    <sys:String x:Key="Str.Adb.Running">Executing shell command...</sys:String>
+    <sys:String x:Key="Str.Adb.Completed">Command completed ✓</sys:String>
+
     <!-- ================= Shopee Bypass Steps ================= -->
-    <sys:String x:Key="Str.Bypass.Step1">[1/6] Cleaning session...</sys:String>
-    <sys:String x:Key="Str.Bypass.Step2">[2/6] Rotating Android ID...</sys:String>
-    <sys:String x:Key="Str.Bypass.Step3">[3/6] Resetting Google Ads...</sys:String>
-    <sys:String x:Key="Str.Bypass.Step4">[4/6] Disconnecting network...</sys:String>
-    <sys:String x:Key="Str.Bypass.Step5">[5/6] Acquiring new IP...</sys:String>
-    <sys:String x:Key="Str.Bypass.Step6">[6/6] Launching Shopee...</sys:String>
+    <sys:String x:Key="Str.Bypass.Step1">[1/8] Clearing Shopee session...</sys:String>
+    <sys:String x:Key="Str.Bypass.Step2">[2/8] Rotating Android ID...</sys:String>
+    <sys:String x:Key="Str.Bypass.Step3">[3/8] Resetting Google Ads ID...</sys:String>
+    <sys:String x:Key="Str.Bypass.Step4">[4/8] Clearing GSF ID...</sys:String>
+    <sys:String x:Key="Str.Bypass.Step5">[5/8] Removing account tokens...</sys:String>
+    <sys:String x:Key="Str.Bypass.Step6">[6/8] Disconnecting network...</sys:String>
+    <sys:String x:Key="Str.Bypass.Step7">[7/8] Waiting for new IP...</sys:String>
+    <sys:String x:Key="Str.Bypass.Step8">[8/8] Launching Shopee...</sys:String>
     <sys:String x:Key="Str.Bypass.Done">Bypass completed ✓</sys:String>
 
     <!-- ================= Android Navigation Tooltips ================= -->

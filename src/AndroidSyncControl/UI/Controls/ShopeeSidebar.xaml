@@ -7,6 +7,9 @@
              d:DesignHeight="780" d:DesignWidth="185"
              Background="#FFFFFF"
              FontFamily="Segoe UI" FontSize="12.5"
+             UseLayoutRounding="True"
+             SnapsToDevicePixels="True"
+             TextOptions.TextFormattingMode="Display"
              Loaded="ShopeeSidebar_Loaded">
 
     <UserControl.Resources>
@@ -193,22 +196,36 @@
             </Grid.RowDefinitions>
 
             <!-- 1. Connection Status Header -->
-            <Border Grid.Row="0" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="12,10" Background="#FAFAFA">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <!-- Device Model Name -->
-                    <TextBlock x:Name="txtDeviceName" Text="{DynamicResource Str.Connect.NoDevice}" FontSize="12.5" FontWeight="SemiBold" 
-                               Foreground="#1E293B" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                    
-                    <!-- Connection Status Dot & Text -->
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Ellipse x:Name="dotConnection" Width="7" Height="7" Fill="#10B981" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                        <TextBlock x:Name="txtConnectionState" Text="{DynamicResource Str.Connect.Disconnected}" FontSize="11" FontWeight="Medium" 
-                                   Foreground="#64748B" VerticalAlignment="Center"/>
-                    </StackPanel>
+            <Border Grid.Row="0" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="12,10" Background="#FAFAFA" MinHeight="38">
+                <Grid VerticalAlignment="Center">
+                    <!-- Mode A: Connected (Device Name on Left, • Connected on Right) -->
+                    <Grid x:Name="panelConnected" Visibility="Collapsed">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <!-- Device Model Name -->
+                        <TextBlock x:Name="txtDeviceName" Text="" FontSize="12.5" FontWeight="SemiBold" 
+                                   Foreground="#1E293B" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,6,0"
+                                   ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+                        
+                        <!-- Connection Status Dot & Text -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Ellipse x:Name="dotConnected" Width="7" Height="7" Fill="#10B981" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBlock x:Name="txtConnectedText" Text="{DynamicResource Str.Connect.Connected}" FontSize="11" FontWeight="Medium" 
+                                       Foreground="#0284C7" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Mode B: Other States (Status Only, clean and uncluttered) -->
+                    <Grid x:Name="panelOtherStatus" Visibility="Visible">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Ellipse x:Name="dotConnection" Width="7" Height="7" Fill="#94A3B8" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                            <TextBlock x:Name="txtConnectionState" Text="{DynamicResource Str.Connect.Disconnected}" FontSize="11.5" FontWeight="Medium" 
+                                       Foreground="#475569" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="145"
+                                       ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+                        </StackPanel>
+                    </Grid>
                 </Grid>
             </Border>
 
@@ -271,6 +288,8 @@
                                  KeyDown="txt_input_KeyDown"/>
                         <Button Grid.Column="1" x:Name="btn_send_text" Style="{StaticResource ActionGreenBtn}"
                                 Width="30" Height="30" Margin="4,0,0,0"
+                                Visibility="Collapsed"
+                                ToolTip="{DynamicResource Str.Action.Send}"
                                 Click="btn_send_text_Click">
                             <TextBlock Text="&#xE724;" FontFamily="Segoe MDL2 Assets" FontSize="12"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -346,21 +365,53 @@
                     <!-- SECTION: SYSTEM -->
                     <TextBlock Text="{DynamicResource Str.Sec.System}" Style="{StaticResource SectionLabel}"/>
 
-                    <Button x:Name="btn_check_update" Style="{StaticResource SidebarBtn}" Click="btn_check_update_Click">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#2563EB"/>
-                            <TextBlock Text="{DynamicResource Str.Action.CheckUpdate}" VerticalAlignment="Center" Foreground="#334155"/>
-                        </StackPanel>
+                    <Button x:Name="btn_check_update" Style="{StaticResource SidebarBtn}" HorizontalContentAlignment="Stretch" Click="btn_check_update_Click">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#2563EB"/>
+                                <TextBlock Text="{DynamicResource Str.Action.CheckUpdate}" VerticalAlignment="Center" Foreground="#334155"/>
+                            </StackPanel>
+                            <Border Grid.Column="1" Background="#F1F5F9" CornerRadius="3" Padding="4,1" VerticalAlignment="Center" Margin="0,0,2,0">
+                                <TextBlock x:Name="txt_update_ver_tag" Text="v1.0.0" FontSize="9.5" FontWeight="SemiBold" Foreground="#64748B"/>
+                            </Border>
+                        </Grid>
                     </Button>
 
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- Status Indicator Strip -->
-            <Border Grid.Row="2" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="10,4">
-                <TextBlock x:Name="txt_status" Text="{DynamicResource Str.Status.Ready}" FontSize="11" Foreground="#10B981" FontWeight="SemiBold"
-                           TextTrimming="CharacterEllipsis"/>
-            </Border>
+            <!-- Status Indicator Strip with real-time Progress -->
+            <Grid Grid.Row="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Processing ProgressBar -->
+                <ProgressBar x:Name="pb_sidebar" Grid.Row="0" Height="2.5" 
+                             IsIndeterminate="True" Visibility="Collapsed"
+                             Foreground="#2563EB" Background="#E2E8F0" BorderThickness="0"/>
+
+                <Border Grid.Row="1" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="10,4">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Ellipse x:Name="dot_status" Width="6" Height="6" Fill="#10B981" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock x:Name="txt_status" Text="{DynamicResource Str.Status.Ready}" FontSize="11" Foreground="#10B981" FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock x:Name="txt_version" Grid.Column="1" Text="v1.0.0" FontSize="10" Foreground="#94A3B8" FontWeight="Medium"
+                                   VerticalAlignment="Center" Margin="6,0,0,0" ToolTip="App Version"/>
+                    </Grid>
+                </Border>
+            </Grid>
 
             <!-- Bottom Android Navigation Bar: [ ≡ ] [ ⌂ ] [ ← ] -->
             <Border Grid.Row="3" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Background="#FAFAFA" Padding="4,2">

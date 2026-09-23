@@ -1,0 +1,19 @@
+﻿<Project>
+  <PropertyGroup>
+    <!-- Single Source of Truth: Read version from root 'VERSION' file -->
+    <RootVersionFile>$([System.IO.Path]::Combine('$(MSBuildThisFileDirectory)', 'VERSION'))</RootVersionFile>
+    <AppSemVer Condition="Exists('$(RootVersionFile)')">$([System.IO.File]::ReadAllText('$(RootVersionFile)').Trim())</AppSemVer>
+    <AppSemVer Condition="'$(AppSemVer)' == ''">1.0.0</AppSemVer>
+
+    <!-- Propagate unified version to all projects in solution -->
+    <Version Condition="'$(Version)' == ''">$(AppSemVer)</Version>
+    <AssemblyVersion Condition="'$(AssemblyVersion)' == ''">$(AppSemVer).0</AssemblyVersion>
+    <FileVersion Condition="'$(FileVersion)' == ''">$(AppSemVer).0</FileVersion>
+    <InformationalVersion Condition="'$(InformationalVersion)' == ''">$(AppSemVer)</InformationalVersion>
+  </PropertyGroup>
+
+  <!-- Auto-copy VERSION to output directory for runtime discovery -->
+  <ItemGroup Condition="Exists('$(RootVersionFile)')">
+    <None Include="$(RootVersionFile)" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+  </ItemGroup>
+</Project>

@@ -13,7 +13,10 @@
         FontFamily="Segoe UI" FontSize="13"
         Background="#FFFFFF"
         Foreground="#1E293B"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
         TextOptions.TextFormattingMode="Display"
+        RenderOptions.BitmapScalingMode="NearestNeighbor"
         StateChanged="Window_StateChanged">
 
     <!-- Clean Unified Workspace: Live Phone Screen (Left) + Attached Sidebar (Right) -->

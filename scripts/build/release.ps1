@@ -211,6 +211,14 @@ Write-Host "SHA-256: $sha256" -ForegroundColor Green
 
 # ── 11. Generate update-manifest.json ────────────────────────────────────────
 Write-Host "[11/12] Generating update-manifest.json..." -ForegroundColor Yellow
+$repoSlug = "Phuc710/AndroidSyncControl"
+try {
+    $remoteOrigin = git config --get remote.origin.url 2>$null
+    if ($remoteOrigin -match 'github\.com[:/]([^/]+/[^/.]+?)(\.git)?$') {
+        $repoSlug = $matches[1]
+    }
+} catch { }
+
 $manifest = [PSCustomObject]@{
     schemaVersion = 1
     product = "AndroidSyncControl"
@@ -219,7 +227,7 @@ $manifest = [PSCustomObject]@{
     platform = "win-x64"
     mandatory = $false
     package = [PSCustomObject]@{
-        url = "https://github.com/Phuc710/AndroidSyncControl/releases/download/v$Version/$zipFileName"
+        url = "https://github.com/$repoSlug/releases/download/v$Version/$zipFileName"
         size = $zipSize
         sha256 = $sha256
     }

@@ -25,6 +25,6 @@ namespace AndroidSyncControl.DataClass
         public bool AutoCheckUpdate { get; set; } = true;
 
         /// <summary>Manifest URL for checking updates. Defaults to GitHub releases raw manifest.</summary>
-        public string UpdateManifestUrl { get; set; } = "https://raw.githubusercontent.com/Phuc710/AndroidSyncControl/main/release/update-manifest.json";
+        public string UpdateManifestUrl { get; set; } = Infrastructure.AppPaths.DefaultManifestUrl;
     }
 }

@@ -64,8 +64,12 @@ namespace AndroidSyncControl.UI
         private const uint WM_CHAR = 0x0102;
 
         private IntPtr _scrcpyHwnd = IntPtr.Zero;
+        private IntPtr _mainHwnd = IntPtr.Zero;          // cached once in Loaded — avoids COM interop per FocusScrcpy call
         private uint _attachedScrcpyThreadId = 0;
         private PanelClickFilter? _panelFilter;
+        private System.Windows.Threading.DispatcherTimer _resizeTimer; // debounce Win32 MoveWindow floods
+        private static readonly string _logPath =
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug_scrcpy.log");
 
         private sealed class PanelClickFilter : System.Windows.Forms.NativeWindow
         {
@@ -107,26 +111,40 @@ namespace AndroidSyncControl.UI
             this.Closed += MainWindow_Closed;
         }
 
-        private void Log(string msg)
-        {
-            try
+        // Fire-and-forget: never block the UI thread on file I/O
+        private void Log(string msg) =>
+            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
             {
-                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-                File.AppendAllText(Path.Combine(baseDir, "debug_scrcpy.log"), $"[{DateTime.Now:HH:mm:ss.fff}] [MainWindow] {msg}\r\n");
-            }
-            catch { }
-        }
+                try { File.AppendAllText(_logPath, $"[{DateTime.Now:HH:mm:ss.fff}] [MainWindow] {msg}\r\n"); }
+                catch { }
+            });
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             Log("MainWindow_Loaded fired");
+
+            // Cache the WPF window's HWND once — used by FocusScrcpy on every click.
+            // WindowInteropHelper.Handle is cheap after first call but allocation is not.
+            _mainHwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+
+            // Resize debounce: coalesce rapid WinForms resize events into a single
+            // MoveWindow call 50 ms after the last event fires.
+            _resizeTimer = new System.Windows.Threading.DispatcherTimer(
+                System.Windows.Threading.DispatcherPriority.Render)
+            {
+                Interval = TimeSpan.FromMilliseconds(50)
+            };
+            _resizeTimer.Tick += (_, __) => { _resizeTimer.Stop(); ResizeScrcpy(); };
+
+            this.Title = $"AndroidSyncControl {Controls.ShopeeSidebar.GetDisplayVersion()}";
             this.Closing += (s, ev) => Log($"MainWindow_Closing fired, Cancel={ev.Cancel}");
             scrcpyPanel.Resize += ScrcpyPanel_Resize;
             scrcpyPanel.DoubleClick += (s, ev) => Dispatcher.Invoke(AutoFitWindowToDevice);
 
+            // MouseClick fires after full press+release — safe to focus SDL2 here.
+            // MouseDown intentionally omitted: focusing SDL2 while button is held makes
+            // SDL2 enter touch-drag mode immediately, causing screen to follow the mouse.
             scrcpyPanel.MouseClick += (s, ev) => FocusScrcpy();
-            scrcpyPanel.MouseDown  += (s, ev) => FocusScrcpy();
-            scrcpyPanel.GotFocus   += (s, ev) => FocusScrcpy();
 
             // Style panel with modern dark slate backdrop
             scrcpyPanel.BackColor = System.Drawing.Color.FromArgb(15, 23, 42);
@@ -176,8 +194,10 @@ namespace AndroidSyncControl.UI
 
         private void ScrcpyPanel_Resize(object sender, EventArgs e)
         {
-            Log($"ScrcpyPanel_Resize: {scrcpyPanel.Width}x{scrcpyPanel.Height}");
-            ResizeScrcpy();
+            // Debounce: restart the 50 ms timer on every resize event.
+            // Prevents MoveWindow from being called dozens of times per second during drag-resize.
+            _resizeTimer.Stop();
+            _resizeTimer.Start();
         }
 
         private bool IsTextInputActive()
@@ -188,22 +208,56 @@ namespace AndroidSyncControl.UI
 
         private void MainWindow_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
+            bool isCtrl = (System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Control) == System.Windows.Input.ModifierKeys.Control;
+
             // Shortcut: Ctrl + F or F11 for AutoFit
-            if ((e.Key == System.Windows.Input.Key.F && (System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Control) == System.Windows.Input.ModifierKeys.Control) 
-                || e.Key == System.Windows.Input.Key.F11)
+            if ((e.Key == System.Windows.Input.Key.F && isCtrl) || e.Key == System.Windows.Input.Key.F11)
             {
                 AutoFitWindowToDevice();
                 e.Handled = true;
                 return;
             }
 
-            // Shortcut: Ctrl + V for direct paste into active phone field
-            if (e.Key == System.Windows.Input.Key.V && (System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Control) == System.Windows.Input.ModifierKeys.Control)
+            // Global shortcuts when NOT typing inside a desktop input control (TextBox/PasswordBox)
+            if (!IsTextInputActive() && isCtrl)
             {
-                if (!IsTextInputActive())
+                // Ctrl + V: Direct paste into phone
+                if (e.Key == System.Windows.Input.Key.V)
                 {
                     e.Handled = true;
                     PasteClipboardToDevice();
+                    return;
+                }
+
+                // Ctrl + A: Select All on phone
+                if (e.Key == System.Windows.Input.Key.A)
+                {
+                    e.Handled = true;
+                    SelectAllOnDevice();
+                    return;
+                }
+
+                // Ctrl + C: Copy from phone to PC clipboard
+                if (e.Key == System.Windows.Input.Key.C)
+                {
+                    e.Handled = true;
+                    CopyFromDevice();
+                    return;
+                }
+
+                // Ctrl + X: Cut on phone
+                if (e.Key == System.Windows.Input.Key.X)
+                {
+                    e.Handled = true;
+                    CutOnDevice();
+                    return;
+                }
+
+                // Ctrl + Z: Undo on phone
+                if (e.Key == System.Windows.Input.Key.Z)
+                {
+                    e.Handled = true;
+                    TriggerScrcpyKeyCombo(0x5A); // VK_Z
                     return;
                 }
             }
@@ -261,25 +315,45 @@ namespace AndroidSyncControl.UI
                 FocusScrcpy();
                 foreach (char c in e.Text)
                 {
-                    PostMessage(_scrcpyHwnd, WM_CHAR, (IntPtr)c, (IntPtr)1);
+                    // Filter out non-printable ASCII control characters (< 32) generated by Ctrl-combinations
+                    if (c >= 32)
+                    {
+                        PostMessage(_scrcpyHwnd, WM_CHAR, (IntPtr)c, (IntPtr)1);
+                    }
                 }
                 e.Handled = true;
             }
         }
 
-        private string SafeGetClipboardText() => ShopeeBypassService.SafeGetClipboardText();
+        private string SafeGetClipboardText()
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                try
+                {
+                    if (Clipboard.ContainsText())
+                    {
+                        return Clipboard.GetText() ?? string.Empty;
+                    }
+                    return string.Empty;
+                }
+                catch
+                {
+                    System.Threading.Thread.Sleep(30);
+                }
+            }
+            return string.Empty;
+        }
 
         public async void PasteClipboardToDevice(string? explicitText = null)
         {
             try
             {
-                FocusScrcpy();
-
-                string text = explicitText;
-                if (string.IsNullOrEmpty(text))
-                {
-                    text = SafeGetClipboardText();
-                }
+                // Determine text source
+                bool fromInputBox = !string.IsNullOrEmpty(explicitText);
+                string text = fromInputBox
+                    ? explicitText!
+                    : SafeGetClipboardText();
 
                 if (string.IsNullOrEmpty(text))
                 {
@@ -287,27 +361,136 @@ namespace AndroidSyncControl.UI
                     return;
                 }
 
-                // Ensure Windows Clipboard and sidebar textbox stay synchronized
-                ShopeeBypassService.SafeSetClipboard(text);
-                shopeeSidebar.SetInputText(text);
-
                 string activeDevice = DeviceConnectionSupervisor.Instance?.ActiveDeviceId;
-                if (!string.IsNullOrEmpty(activeDevice))
-                {
-                    shopeeSidebar.SetStatus(Localization.LanguageManager.GetString("Str.Status.Pasting"));
-                    await ShopeeBypassService.DirectClipboardPasteAsync(activeDevice, text, TriggerScrcpyPaste);
-                    shopeeSidebar.SetStatus(Localization.LanguageManager.GetString("Str.Status.Done"));
-                    FocusScrcpy();
-                }
-                else
+                if (string.IsNullOrEmpty(activeDevice))
                 {
                     shopeeSidebar.SetStatus(Localization.LanguageManager.GetString("Str.Status.NotConnected"));
+                    return;
                 }
+
+                // If sourced from Windows clipboard (Ctrl+V), show the text in sidebar input
+                if (!fromInputBox)
+                    shopeeSidebar.SetInputText(text);
+
+                shopeeSidebar.SetStatus(Localization.LanguageManager.GetString("Str.Status.Pasting"));
+                FocusScrcpy();
+
+                await ShopeeBypassService.DirectClipboardPasteAsync(activeDevice, text, TriggerScrcpyPaste);
+
+                shopeeSidebar.SetStatus(Localization.LanguageManager.GetString("Str.Status.Done"));
+                FocusScrcpy();
             }
             catch (Exception ex)
             {
                 shopeeSidebar.SetStatus($"Error: {ex.Message}");
                 Log($"PasteClipboardToDevice error: {ex.Message}");
+            }
+        }
+
+        public void SelectAllOnDevice()
+        {
+            try
+            {
+                string activeDevice = DeviceConnectionSupervisor.Instance?.ActiveDeviceId;
+                if (string.IsNullOrEmpty(activeDevice))
+                {
+                    shopeeSidebar.SetStatus(Localization.LanguageManager.GetString("Str.Status.NotConnected"));
+                    return;
+                }
+
+                FocusScrcpy();
+                // 1. PostMessage Ctrl+A to scrcpy SDL2 window (VK_A = 0x41)
+                TriggerScrcpyKeyCombo(0x41);
+
+                // 2. Also send ADB input keyevent fallback for universal support across all devices
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await ShopeeBypassService.RunAdbAsync(activeDevice, "shell input keyevent 29 --meta 4096", 1500);
+                    }
+                    catch { }
+                });
+
+                shopeeSidebar.SetStatus(Localization.LanguageManager.GetString("Str.Status.SelectAll"));
+            }
+            catch (Exception ex)
+            {
+                Log($"SelectAllOnDevice error: {ex.Message}");
+            }
+        }
+
+        public async void CopyFromDevice()
+        {
+            try
+            {
+                string activeDevice = DeviceConnectionSupervisor.Instance?.ActiveDeviceId;
+                if (string.IsNullOrEmpty(activeDevice))
+                {
+                    shopeeSidebar.SetStatus(Localization.LanguageManager.GetString("Str.Status.NotConnected"));
+                    return;
+                }
+
+                FocusScrcpy();
+                // 1. Send Ctrl+C to device so Android copies active selection to device clipboard
+                TriggerScrcpyKeyCombo(0x43); // VK_C
+
+                // 2. Also send ADB fallback: keyevent 31 with meta 4096
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await ShopeeBypassService.RunAdbAsync(activeDevice, "shell input keyevent 31 --meta 4096", 1500);
+                    }
+                    catch { }
+                });
+
+                // 3. Send scrcpy shortcut MOD+c (Alt+C) to synchronize device clipboard to computer clipboard
+                await Task.Delay(50);
+                TriggerScrcpyAltKeyCombo(0x43);
+
+                // 4. Check Windows clipboard after sync and echo into sidebar
+                await Task.Delay(120);
+                string text = SafeGetClipboardText();
+                if (!string.IsNullOrEmpty(text))
+                {
+                    shopeeSidebar.SetInputText(text);
+                }
+                shopeeSidebar.SetStatus(Localization.LanguageManager.GetString("Str.Status.Copied"));
+            }
+            catch (Exception ex)
+            {
+                Log($"CopyFromDevice error: {ex.Message}");
+            }
+        }
+
+        public void CutOnDevice()
+        {
+            try
+            {
+                string activeDevice = DeviceConnectionSupervisor.Instance?.ActiveDeviceId;
+                if (string.IsNullOrEmpty(activeDevice)) return;
+
+                FocusScrcpy();
+                TriggerScrcpyKeyCombo(0x58); // VK_X
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await ShopeeBypassService.RunAdbAsync(activeDevice, "shell input keyevent 52 --meta 4096", 1500);
+                        await Task.Delay(50);
+                        await Dispatcher.InvokeAsync(() => TriggerScrcpyAltKeyCombo(0x43));
+                        await Task.Delay(100);
+                        string text = SafeGetClipboardText();
+                        if (!string.IsNullOrEmpty(text))
+                            shopeeSidebar.SetInputText(text);
+                    }
+                    catch { }
+                });
+            }
+            catch (Exception ex)
+            {
+                Log($"CutOnDevice error: {ex.Message}");
             }
         }
 
@@ -496,21 +679,19 @@ namespace AndroidSyncControl.UI
 
         public void FocusScrcpy()
         {
-            if (_scrcpyHwnd != IntPtr.Zero)
+            if (_scrcpyHwnd == IntPtr.Zero) return;
+            try
             {
-                try
-                {
-                    IntPtr mainHwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-                    SetForegroundWindow(mainHwnd);
-                    SetFocus(_scrcpyHwnd);
-                    SendMessage(_scrcpyHwnd, WM_ACTIVATE, (IntPtr)WA_ACTIVE, IntPtr.Zero);
-                    SendMessage(_scrcpyHwnd, WM_SETFOCUS, mainHwnd, IntPtr.Zero);
-                }
-                catch { }
+                // scrcpy runs in a separate process; SetForegroundWindow is required
+                // before SetFocus can steal focus cross-process on modern Windows.
+                // Use cached _mainHwnd — avoids re-allocating WindowInteropHelper wrapper.
+                SetForegroundWindow(_mainHwnd);
+                SetFocus(_scrcpyHwnd);
             }
+            catch { }
         }
 
-        public void TriggerScrcpyPaste()
+        public void TriggerScrcpyKeyCombo(int vk)
         {
             if (_scrcpyHwnd != IntPtr.Zero)
             {
@@ -518,17 +699,41 @@ namespace AndroidSyncControl.UI
                 {
                     FocusScrcpy();
                     const int VK_CONTROL = 0x11;
-                    const int VK_V = 0x56;
                     PostMessage(_scrcpyHwnd, WM_KEYDOWN, (IntPtr)VK_CONTROL, (IntPtr)1);
-                    PostMessage(_scrcpyHwnd, WM_KEYDOWN, (IntPtr)VK_V, (IntPtr)1);
-                    PostMessage(_scrcpyHwnd, WM_KEYUP, (IntPtr)VK_V, (IntPtr)(1 | (1 << 30) | (1 << 31)));
+                    PostMessage(_scrcpyHwnd, WM_KEYDOWN, (IntPtr)vk, (IntPtr)1);
+                    PostMessage(_scrcpyHwnd, WM_KEYUP, (IntPtr)vk, (IntPtr)(1 | (1 << 30) | (1 << 31)));
                     PostMessage(_scrcpyHwnd, WM_KEYUP, (IntPtr)VK_CONTROL, (IntPtr)(1 | (1 << 30) | (1 << 31)));
                 }
                 catch (Exception ex)
                 {
-                    Log($"TriggerScrcpyPaste error: {ex.Message}");
+                    Log($"TriggerScrcpyKeyCombo error: {ex.Message}");
                 }
             }
+        }
+
+        public void TriggerScrcpyAltKeyCombo(int vk)
+        {
+            if (_scrcpyHwnd != IntPtr.Zero)
+            {
+                try
+                {
+                    FocusScrcpy();
+                    const int VK_MENU = 0x12;
+                    PostMessage(_scrcpyHwnd, WM_KEYDOWN, (IntPtr)VK_MENU, (IntPtr)1);
+                    PostMessage(_scrcpyHwnd, WM_KEYDOWN, (IntPtr)vk, (IntPtr)1);
+                    PostMessage(_scrcpyHwnd, WM_KEYUP, (IntPtr)vk, (IntPtr)(1 | (1 << 30) | (1 << 31)));
+                    PostMessage(_scrcpyHwnd, WM_KEYUP, (IntPtr)VK_MENU, (IntPtr)(1 | (1 << 30) | (1 << 31)));
+                }
+                catch (Exception ex)
+                {
+                    Log($"TriggerScrcpyAltKeyCombo error: {ex.Message}");
+                }
+            }
+        }
+
+        public void TriggerScrcpyPaste()
+        {
+            TriggerScrcpyKeyCombo(0x56); // VK_V
         }
 
         private ConnectionStateChangedEventArgs _lastConnectionState;
@@ -557,7 +762,7 @@ namespace AndroidSyncControl.UI
                         statusDot.Visibility = Visibility.Collapsed;
                         wfHost.Visibility = Visibility.Collapsed;
                         overlayPanel.Visibility = Visibility.Visible;
-                        shopeeSidebar.UpdateConnectionStatus("Android Device", Localization.LanguageManager.GetString("Str.Connect.Initializing"), "#2563EB");
+                        shopeeSidebar.UpdateConnectionStatus(null, Localization.LanguageManager.GetString("Str.Connect.Initializing"), "#2563EB", false);
                         break;
 
                     case ConnectionState.Searching:
@@ -570,7 +775,7 @@ namespace AndroidSyncControl.UI
                         wfHost.Visibility = Visibility.Collapsed;
                         overlayPanel.Visibility = Visibility.Visible;
                         shopeeSidebar.GetCurrentDeviceId = () => string.Empty;
-                        shopeeSidebar.UpdateConnectionStatus("Android Device", Localization.LanguageManager.GetString("Str.Connect.Searching"), "#2563EB");
+                        shopeeSidebar.UpdateConnectionStatus(null, Localization.LanguageManager.GetString("Str.Connect.Searching"), "#2563EB", false);
                         break;
 
                     case ConnectionState.DeviceDetected:
@@ -583,14 +788,14 @@ namespace AndroidSyncControl.UI
                         statusDot.Visibility = Visibility.Collapsed;
                         wfHost.Visibility = Visibility.Collapsed;
                         overlayPanel.Visibility = Visibility.Visible;
-                        shopeeSidebar.UpdateConnectionStatus(e.DeviceModel, Localization.LanguageManager.GetString("Str.Connect.Connecting"), "#2563EB");
+                        shopeeSidebar.UpdateConnectionStatus(null, Localization.LanguageManager.GetString("Str.Connect.Connecting"), "#2563EB", false);
                         break;
 
                     case ConnectionState.Connected:
                         wfHost.Visibility = Visibility.Visible;
                         overlayPanel.Visibility = Visibility.Collapsed;
                         shopeeSidebar.GetCurrentDeviceId = () => e.DeviceId;
-                        shopeeSidebar.UpdateConnectionStatus(e.DeviceModel, Localization.LanguageManager.GetString("Str.Connect.Connected"), "#10B981");
+                        shopeeSidebar.UpdateConnectionStatus(e.DeviceModel, Localization.LanguageManager.GetString("Str.Connect.Connected"), "#10B981", true);
                         Dispatcher.InvokeAsync(() =>
                         {
                             AutoFitWindowToDevice();
@@ -608,7 +813,7 @@ namespace AndroidSyncControl.UI
                         progressBarStatus.Visibility = Visibility.Collapsed;
                         wfHost.Visibility = Visibility.Collapsed;
                         overlayPanel.Visibility = Visibility.Visible;
-                        shopeeSidebar.UpdateConnectionStatus("Offline", Localization.LanguageManager.GetString("Str.Connect.Disconnected"), "#94A3B8");
+                        shopeeSidebar.UpdateConnectionStatus(null, Localization.LanguageManager.GetString("Str.Connect.Disconnected"), "#94A3B8", false);
                         break;
 
                     case ConnectionState.Reconnecting:
@@ -620,7 +825,7 @@ namespace AndroidSyncControl.UI
                         statusDot.Visibility = Visibility.Collapsed;
                         wfHost.Visibility = Visibility.Collapsed;
                         overlayPanel.Visibility = Visibility.Visible;
-                        shopeeSidebar.UpdateConnectionStatus("Offline", $"{Localization.LanguageManager.GetString("Str.Connect.Reconnecting")} ({e.Attempt})", "#F59E0B");
+                        shopeeSidebar.UpdateConnectionStatus(null, $"{Localization.LanguageManager.GetString("Str.Connect.Reconnecting")} ({e.Attempt})", "#F59E0B", false);
                         break;
 
                     case ConnectionState.AdbUnavailable:
@@ -632,7 +837,7 @@ namespace AndroidSyncControl.UI
                         progressBarStatus.Visibility = Visibility.Collapsed;
                         wfHost.Visibility = Visibility.Collapsed;
                         overlayPanel.Visibility = Visibility.Visible;
-                        shopeeSidebar.UpdateConnectionStatus("Offline", Localization.LanguageManager.GetString("Str.Connect.AdbError"), "#EF4444");
+                        shopeeSidebar.UpdateConnectionStatus(null, Localization.LanguageManager.GetString("Str.Connect.AdbError"), "#EF4444", false);
                         break;
                 }
             });

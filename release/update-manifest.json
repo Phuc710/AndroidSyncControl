@@ -1,19 +1,19 @@
 ﻿{
     "schemaVersion":  1,
     "product":  "AndroidSyncControl",
-    "version":  "1.0.1",
+    "version":  "1.0.0",
     "channel":  "stable",
     "platform":  "win-x64",
     "mandatory":  false,
     "package":  {
-                    "url":  "https://github.com/Phuc710/AndroidSyncControl/releases/download/v1.0.1/AndroidSyncControl-1.0.1-win-x64.zip",
-                    "size":  84123539,
-                    "sha256":  "e65557192cfd0fd68e03372a336a1f8fb09025a073763ab0f352618edff06594"
+                    "url":  "https://github.com/Phuc710/AndroidSyncControl/releases/download/v1.0.0/AndroidSyncControl-1.0.0-win-x64.zip",
+                    "size":  84178684,
+                    "sha256":  "a05e396391bfecb1af65b76bbc05c41c138a7fa1d5c8c56453007dc201561a89"
                 },
     "release":  {
-                    "publishedAt":  "2026-09-23T04:01:46Z",
+                    "publishedAt":  "2026-09-23T07:26:54Z",
                     "changelog":  [
-                                      "Production packaging pipeline release v1.0.1",
+                                      "Production packaging pipeline release v1.0.0",
                                       "Independent rollback-capable update engine (AndroidSyncControl.Updater)",
                                       "3-tier persistent data isolation (App vs LocalAppData vs Agent-Data)",
                                       "Universal Android mirroring and automated bypass engine"

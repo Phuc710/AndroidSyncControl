@@ -7,7 +7,7 @@
       3. Commit & push code to origin main
       4. Automatically create GitHub Release and upload 4 artifacts (ZIP, Setup.exe, SHA-256, update-manifest.json)
 .EXAMPLE
-    .\scripts\build\publish.ps1 -Version 1.0.1
+    .\scripts\build\publish.ps1 -Version 1.0.0
 #>
 param(
     [string]$Version,
@@ -84,7 +84,15 @@ $releaseDir = Join-Path $rootDir "release"
 $tag = "v$Version"
 $title = "AndroidSyncControl $tag"
 
-Write-Host "Publishing Release $tag to GitHub..." -ForegroundColor Yellow
+$repoSlug = "Phuc710/AndroidSyncControl"
+try {
+    $remoteOrigin = git config --get remote.origin.url 2>$null
+    if ($remoteOrigin -match 'github\.com[:/]([^/]+/[^/.]+?)(\.git)?$') {
+        $repoSlug = $matches[1]
+    }
+} catch { }
+
+Write-Host "Publishing Release $tag to GitHub ($repoSlug)..." -ForegroundColor Yellow
 
 $zipFile = Get-ChildItem -Path $releaseDir -Filter "*$Version*.zip" | Select-Object -First 1 -ExpandProperty FullName
 $exeFile = Get-ChildItem -Path $releaseDir -Filter "*$Version*-Setup.exe" | Select-Object -First 1 -ExpandProperty FullName
@@ -93,14 +101,14 @@ $manifestFile = Join-Path $releaseDir "update-manifest.json"
 
 $filesToUpload = @($zipFile, $exeFile, $shaFile, $manifestFile) | Where-Object { $_ -and (Test-Path $_) }
 
-& $ghExe release create $tag $filesToUpload --title $title --generate-notes
+& $ghExe release create $tag $filesToUpload --title $title --generate-notes --clobber
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host ""
     Write-Host "========================================================" -ForegroundColor Green
     Write-Host " BẢN RELEASE $tag ĐÃ ĐƯỢC TỰ ĐỘNG PHÁT HÀNH LÊN GITHUB!" -ForegroundColor Green
     Write-Host "========================================================" -ForegroundColor Green
-    Write-Host "Xem tại: https://github.com/Phuc710/AndroidSyncControl/releases/tag/$tag" -ForegroundColor Cyan
+    Write-Host "Xem tại: https://github.com/$repoSlug/releases/tag/$tag" -ForegroundColor Cyan
 } else {
     Write-Error "Lỗi khi upload release qua GitHub CLI."
 }

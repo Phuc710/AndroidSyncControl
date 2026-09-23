@@ -29,7 +29,7 @@
 
     <!-- ================= Sidebar Sections ================= -->
     <sys:String x:Key="Str.Sec.Device">THIẾT BỊ</sys:String>
-    <sys:String x:Key="Str.Sec.Clipboard">CLIPBOARD</sys:String>
+    <sys:String x:Key="Str.Sec.Clipboard">PASTE</sys:String>
     <sys:String x:Key="Str.Sec.Files">TỆP TIN</sys:String>
     <sys:String x:Key="Str.Sec.Network">MẠNG</sys:String>
     <sys:String x:Key="Str.Sec.Shopee">SHOPEE</sys:String>
@@ -54,15 +54,21 @@
     <!-- ================= Status Messages ================= -->
     <sys:String x:Key="Str.Status.Ready">Sẵn sàng</sys:String>
     <sys:String x:Key="Str.Status.Done">Hoàn tất ✓</sys:String>
+    <sys:String x:Key="Str.Status.Copied">Đã sao chép ✓</sys:String>
+    <sys:String x:Key="Str.Status.SelectAll">Đã chọn tất cả</sys:String>
     <sys:String x:Key="Str.Status.EmptyClipboard">Clipboard trống</sys:String>
     <sys:String x:Key="Str.Status.NotConnected">Chưa kết nối</sys:String>
     <sys:String x:Key="Str.Status.Pasting">Đang dán...</sys:String>
     <sys:String x:Key="Str.Status.Capturing">Đang chụp...</sys:String>
     <sys:String x:Key="Str.Status.Rebooting">Đang khởi động lại...</sys:String>
     <sys:String x:Key="Str.Status.Installing">Đang cài đặt...</sys:String>
+    <sys:String x:Key="Str.Status.InstallingApk">Đang cài đặt {0} ({1:F1} MB)...</sys:String>
+    <sys:String x:Key="Str.Status.InstallSuccess">Cài đặt thành công ✓</sys:String>
+    <sys:String x:Key="Str.Status.InstallFailed">Cài đặt thất bại: {0}</sys:String>
     <sys:String x:Key="Str.Status.OpeningShopee">Đang mở Shopee...</sys:String>
     <sys:String x:Key="Str.Status.RotatingIp">Đang đổi IP...</sys:String>
     <sys:String x:Key="Str.Status.ProxyCleared">Đã xóa proxy ✓</sys:String>
+    <sys:String x:Key="Str.Status.AdbShellOpening">Đang mở ADB Shell...</sys:String>
 
     <!-- ================= Dialogs ================= -->
     <sys:String x:Key="Str.Dialog.RebootConfirm">Khởi động lại thiết bị?</sys:String>
@@ -70,13 +76,56 @@
     <sys:String x:Key="Str.Dialog.ProxyCurrentPrompt">Proxy: {0}&#x0A;Nhập host:port mới:</sys:String>
     <sys:String x:Key="Str.Dialog.Apply">Áp dụng</sys:String>
 
+    <!-- ================= Proxy Manager Dialog ================= -->
+    <sys:String x:Key="Str.Proxy.Title">Quản Lý Proxy Thiết Bị</sys:String>
+    <sys:String x:Key="Str.Proxy.CurrentState">Trạng thái hiện tại:</sys:String>
+    <sys:String x:Key="Str.Proxy.Direct">Trực tiếp (Không dùng Proxy)</sys:String>
+    <sys:String x:Key="Str.Proxy.Active">Đang hoạt động: {0}</sys:String>
+    <sys:String x:Key="Str.Proxy.HostLabel">Địa chỉ IP / Host:</sys:String>
+    <sys:String x:Key="Str.Proxy.PortLabel">Cổng (Port):</sys:String>
+    <sys:String x:Key="Str.Proxy.DisableBtn">Tắt / Xóa Proxy</sys:String>
+    <sys:String x:Key="Str.Proxy.ApplyBtn">Áp Dụng Proxy</sys:String>
+    <sys:String x:Key="Str.Proxy.TestIpBtn">Kiểm Tra IP</sys:String>
+    <sys:String x:Key="Str.Proxy.Testing">Đang kiểm tra kết nối mạng...</sys:String>
+    <sys:String x:Key="Str.Proxy.TestSuccess">IP hiện tại: {0}</sys:String>
+    <sys:String x:Key="Str.Proxy.TestFailed">Không thể kết nối internet qua proxy này</sys:String>
+
+    <!-- ================= Backup / Restore Dialog ================= -->
+    <sys:String x:Key="Str.Backup.Title">Sao Lưu &amp; Khôi Phục Shopee</sys:String>
+    <sys:String x:Key="Str.Backup.Desc">Quản lý các bản sao lưu session, tài khoản và dữ liệu ứng dụng Shopee trên thiết bị.</sys:String>
+    <sys:String x:Key="Str.Backup.CreateBtn">Tạo Bản Sao Lưu Mới</sys:String>
+    <sys:String x:Key="Str.Backup.ExistingBackups">Danh Sách Bản Sao Lưu Đã Lưu</sys:String>
+    <sys:String x:Key="Str.Backup.RestoreBtn">Khôi Phục</sys:String>
+    <sys:String x:Key="Str.Backup.DeleteBtn">Xóa</sys:String>
+    <sys:String x:Key="Str.Backup.OpenFolder">Mở Thư Mục</sys:String>
+    <sys:String x:Key="Str.Backup.BackingUp">Đang sao lưu dữ liệu Shopee...</sys:String>
+    <sys:String x:Key="Str.Backup.Restoring">Đang khôi phục dữ liệu vào thiết bị...</sys:String>
+    <sys:String x:Key="Str.Backup.Success">Sao lưu hoàn tất ✓</sys:String>
+    <sys:String x:Key="Str.Backup.RestoreSuccess">Khôi phục thành công ✓ Đã nạp lại dữ liệu &amp; SSAID.</sys:String>
+    <sys:String x:Key="Str.Backup.NoBackups">Chưa có bản sao lưu nào. Hãy bấm 'Tạo Bản Sao Lưu Mới' để lưu session hiện tại.</sys:String>
+    <sys:String x:Key="Str.Backup.ConfirmRestore">Bạn có chắc chắn muốn khôi phục bản sao lưu này?&#x0A;Dữ liệu Shopee hiện tại trên máy sẽ được thay thế.</sys:String>
+    <sys:String x:Key="Str.Backup.ConfirmDelete">Bạn có muốn xóa bản sao lưu này không?</sys:String>
+
+    <!-- ================= ADB Smart Console ================= -->
+    <sys:String x:Key="Str.Adb.Title">ADB Smart Console &amp; Automation</sys:String>
+    <sys:String x:Key="Str.Adb.Subtitle">Thực thi lệnh shell và kịch bản tự động hóa trên thiết bị Android</sys:String>
+    <sys:String x:Key="Str.Adb.RunBtn">Chạy Lệnh</sys:String>
+    <sys:String x:Key="Str.Adb.ClearBtn">Xóa Màn Hình</sys:String>
+    <sys:String x:Key="Str.Adb.OpenCmdBtn">Mở CMD Shell</sys:String>
+    <sys:String x:Key="Str.Adb.CopyBtn">Sao Chép</sys:String>
+    <sys:String x:Key="Str.Adb.PresetLabel">Lệnh Nhanh &amp; Kịch Bản:</sys:String>
+    <sys:String x:Key="Str.Adb.Running">Đang thực thi lệnh shell...</sys:String>
+    <sys:String x:Key="Str.Adb.Completed">Lệnh đã thực thi xong ✓</sys:String>
+
     <!-- ================= Shopee Bypass Steps ================= -->
-    <sys:String x:Key="Str.Bypass.Step1">[1/6] Xóa session...</sys:String>
-    <sys:String x:Key="Str.Bypass.Step2">[2/6] Đổi Android ID...</sys:String>
-    <sys:String x:Key="Str.Bypass.Step3">[3/6] Reset Google Ads...</sys:String>
-    <sys:String x:Key="Str.Bypass.Step4">[4/6] Ngắt kết nối...</sys:String>
-    <sys:String x:Key="Str.Bypass.Step5">[5/6] Nhận IP mới...</sys:String>
-    <sys:String x:Key="Str.Bypass.Step6">[6/6] Khởi chạy Shopee...</sys:String>
+    <sys:String x:Key="Str.Bypass.Step1">[1/8] Xóa session Shopee...</sys:String>
+    <sys:String x:Key="Str.Bypass.Step2">[2/8] Đổi Android ID...</sys:String>
+    <sys:String x:Key="Str.Bypass.Step3">[3/8] Reset Google Ads ID...</sys:String>
+    <sys:String x:Key="Str.Bypass.Step4">[4/8] Xóa GSF ID...</sys:String>
+    <sys:String x:Key="Str.Bypass.Step5">[5/8] Xóa token tài khoản...</sys:String>
+    <sys:String x:Key="Str.Bypass.Step6">[6/8] Ngắt kết nối mạng...</sys:String>
+    <sys:String x:Key="Str.Bypass.Step7">[7/8] Chờ IP mới...</sys:String>
+    <sys:String x:Key="Str.Bypass.Step8">[8/8] Khởi chạy Shopee...</sys:String>
     <sys:String x:Key="Str.Bypass.Done">Bypass hoàn tất ✓</sys:String>
 
     <!-- ================= Android Navigation Tooltips ================= -->

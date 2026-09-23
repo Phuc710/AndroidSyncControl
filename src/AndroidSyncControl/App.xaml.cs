@@ -48,7 +48,7 @@ namespace AndroidSyncControl
                     string manifestUrl = Singleton.Setting.Setting.UpdateManifestUrl;
                     if (string.IsNullOrWhiteSpace(manifestUrl))
                     {
-                        manifestUrl = "https://raw.githubusercontent.com/Phuc710/AndroidSyncControl/main/release/update-manifest.json";
+                        manifestUrl = AppPaths.DefaultManifestUrl;
                     }
 
                     var manifest = await UpdateService.CheckForUpdateAsync(manifestUrl);

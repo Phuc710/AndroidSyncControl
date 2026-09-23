@@ -21,7 +21,10 @@ namespace AndroidSyncControl.Infrastructure
 
         public static string AppDir => _appDir.Value;
 
-        // ── Program Files / Read-only Application Directory ─────────────────
+        // ── Single Source of Truth for Repository & OTA Manifest ──────────
+        public const string DefaultRepoSlug = "Phuc710/AndroidSyncControl";
+        public const string DefaultManifestUrl = "https://raw.githubusercontent.com/" + DefaultRepoSlug + "/main/release/update-manifest.json";
+
         public static string RuntimeDir => Path.Combine(AppDir, "Runtime");
         public static string InstallMetadataFile => Path.Combine(AppDir, "install.json");
         public static string UpdaterExePath
@@ -38,8 +41,7 @@ namespace AndroidSyncControl.Infrastructure
                     Path.Combine(AppDir, "..", "..", "..", "AndroidSyncControl.Updater", "bin", "Release", "net8.0-windows", "AndroidSyncControl.Updater.exe"),
                     Path.Combine(AppDir, "..", "..", "..", "AndroidSyncControl.Updater", "bin", "x64", "Release", "net8.0-windows", "win-x64", "AndroidSyncControl.Updater.exe"),
                     Path.Combine(AppDir, "..", "..", "..", "AndroidSyncControl.Updater", "bin", "x64", "Debug", "net8.0-windows", "win-x64", "AndroidSyncControl.Updater.exe"),
-                    Path.Combine(AppDir, "..", "..", "..", "AndroidSyncControl.Updater", "bin", "Debug", "net8.0-windows", "AndroidSyncControl.Updater.exe"),
-                    Path.Combine(AppDir, "..", "..", "dist", "AndroidSyncControl-1.0.1-win-x64", "AndroidSyncControl.Updater.exe")
+                    Path.Combine(AppDir, "..", "..", "..", "AndroidSyncControl.Updater", "bin", "Debug", "net8.0-windows", "AndroidSyncControl.Updater.exe")
                 };
 
                 foreach (var candidate in candidates)
@@ -49,6 +51,21 @@ namespace AndroidSyncControl.Infrastructure
                         return Path.GetFullPath(candidate);
                     }
                 }
+
+                // Dynamically find any staged updater in dist/ folder without hardcoded version
+                try
+                {
+                    string distDir = Path.GetFullPath(Path.Combine(AppDir, "..", "..", "dist"));
+                    if (Directory.Exists(distDir))
+                    {
+                        foreach (var subDir in Directory.GetDirectories(distDir, "AndroidSyncControl-*-win-x64"))
+                        {
+                            string updaterInDist = Path.Combine(subDir, "AndroidSyncControl.Updater.exe");
+                            if (File.Exists(updaterInDist)) return Path.GetFullPath(updaterInDist);
+                        }
+                    }
+                }
+                catch { }
 
                 return primary;
             }

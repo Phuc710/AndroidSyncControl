@@ -21,47 +21,147 @@ namespace AndroidSyncControl.UI.Controls
         public ShopeeSidebar()
         {
             InitializeComponent();
+            ApplyVersionInfo();
+            // Show paste button only when input box has text; collapsed/pointer-none when empty
+            txt_input.TextChanged += (s, e) =>
+            {
+                bool hasText = !string.IsNullOrWhiteSpace(txt_input.Text);
+                btn_send_text.Visibility = hasText ? Visibility.Visible : Visibility.Collapsed;
+            };
         }
 
+        public static string GetDisplayVersion()
+        {
+            try
+            {
+                var meta = AndroidSyncControl.Infrastructure.InstallationMetadata.Load();
+                if (!string.IsNullOrWhiteSpace(meta?.Version))
+                    return $"v{meta.Version}";
+            }
+            catch { }
+
+            try
+            {
+                string vFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "VERSION");
+                if (File.Exists(vFile))
+                {
+                    string v = File.ReadAllText(vFile).Trim();
+                    if (!string.IsNullOrEmpty(v)) return $"v{v}";
+                }
+            }
+            catch { }
+
+            var curVer = Update.UpdateService.CurrentVersion;
+            return $"v{curVer.Major}.{curVer.Minor}.{Math.Max(0, curVer.Build)}";
+        }
+
+        private void ApplyVersionInfo()
+        {
+            string ver = GetDisplayVersion();
+            if (txt_version != null) txt_version.Text = ver;
+            if (txt_update_ver_tag != null) txt_update_ver_tag.Text = ver;
+        }
+
+        /// <summary>
+        /// Sets the text in the sidebar input box (called when Ctrl+V is pressed to echo clipboard content).
+        /// Does NOT fire if the user is actively typing (caret is inside the box).
+        /// </summary>
         public void SetInputText(string text)
         {
             Dispatcher.InvokeAsync(() =>
             {
-                txt_input.Text = text ?? string.Empty;
+                // Only overwrite if the user isn't actively editing the box
+                if (!txt_input.IsKeyboardFocusWithin)
+                    txt_input.Text = text ?? string.Empty;
             });
         }
 
         private string ActiveDeviceId => GetCurrentDeviceId?.Invoke() ?? string.Empty;
 
-        public void UpdateConnectionStatus(string deviceName, string status, string dotColorHex)
+        public void UpdateConnectionStatus(string? deviceName, string status, string dotColorHex, bool isConnected = false)
         {
             Dispatcher.InvokeAsync(() =>
             {
-                txtDeviceName.Text = string.IsNullOrEmpty(deviceName) ? "Offline" : deviceName;
-                txtConnectionState.Text = status;
-                try
+                bool actuallyConnected = isConnected || 
+                    (!string.IsNullOrWhiteSpace(deviceName) && 
+                     deviceName != "Offline" && 
+                     deviceName != "Android Device" && 
+                     (status == "Connected" || status == Localization.LanguageManager.GetString("Str.Connect.Connected")));
+
+                if (actuallyConnected && !string.IsNullOrWhiteSpace(deviceName))
                 {
-                    dotConnection.Fill = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFromString(dotColorHex);
+                    panelConnected.Visibility = Visibility.Visible;
+                    panelOtherStatus.Visibility = Visibility.Collapsed;
+                    txtDeviceName.Text = deviceName;
+                    txtConnectedText.Text = status;
+                    try
+                    {
+                        dotConnected.Fill = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFromString(dotColorHex);
+                    }
+                    catch { }
                 }
-                catch { }
+                else
+                {
+                    panelConnected.Visibility = Visibility.Collapsed;
+                    panelOtherStatus.Visibility = Visibility.Visible;
+                    txtConnectionState.Text = status;
+                    try
+                    {
+                        dotConnection.Fill = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFromString(dotColorHex);
+                    }
+                    catch { }
+                }
             });
         }
 
         private void ShopeeSidebar_Loaded(object sender, RoutedEventArgs e)
         {
+            ApplyVersionInfo();
         }
 
         public void SetStatus(string msg)
         {
-            Dispatcher.BeginInvoke(new Action(() =>
+            SetProcessing(false, msg);
+        }
+
+        public void SetProcessing(bool isProcessing, string msg, bool isError = false)
+        {
+            if (Dispatcher.CheckAccess())
+            {
+                ApplyProcessingUI(isProcessing, msg, isError);
+            }
+            else
+            {
+                Dispatcher.InvokeAsync(() => ApplyProcessingUI(isProcessing, msg, isError),
+                    System.Windows.Threading.DispatcherPriority.DataBind);
+            }
+        }
+
+        private void ApplyProcessingUI(bool isProcessing, string msg, bool isError)
+        {
+            if (pb_sidebar != null)
+            {
+                pb_sidebar.Visibility = isProcessing ? Visibility.Visible : Visibility.Collapsed;
+            }
+
+            if (txt_status != null && txt_status.Text != msg)
             {
                 txt_status.Text = msg;
-            }));
+            }
+
+            var color = isError 
+                ? (System.Windows.Media.Brush)new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xEF, 0x44, 0x44))
+                : isProcessing 
+                    ? (System.Windows.Media.Brush)new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x25, 0x63, 0xEB))
+                    : (System.Windows.Media.Brush)new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x10, 0xB9, 0x81));
+
+            if (txt_status != null) txt_status.Foreground = color;
+            if (dot_status != null) dot_status.Fill = color;
         }
 
         private async void btn_info_Click(object sender, RoutedEventArgs e)
         {
-            SetStatus(Localization.LanguageManager.GetString("Str.Status.Ready"));
+            SetProcessing(false, Localization.LanguageManager.GetString("Str.Status.Ready"));
             string info = await ShopeeBypassService.GetPhoneInfoAsync(ActiveDeviceId);
             MessageBox.Show(info, Localization.LanguageManager.GetString("Str.Action.Info"), MessageBoxButton.OK, MessageBoxImage.Information);
         }
@@ -69,13 +169,13 @@ namespace AndroidSyncControl.UI.Controls
         private void btn_fit_screen_Click(object sender, RoutedEventArgs e)
         {
             RequestAutoFit?.Invoke();
-            SetStatus(Localization.LanguageManager.GetString("Str.Status.Done"));
+            SetProcessing(false, Localization.LanguageManager.GetString("Str.Status.Done"));
         }
 
         private async void btn_power_Click(object sender, RoutedEventArgs e)
         {
             await ShopeeBypassService.PowerAsync(ActiveDeviceId);
-            SetStatus(Localization.LanguageManager.GetString("Str.Action.Power") + " ✓");
+            SetProcessing(false, Localization.LanguageManager.GetString("Str.Action.Power") + " ✓");
         }
 
         private async void btn_reboot_Click(object sender, RoutedEventArgs e)
@@ -85,50 +185,23 @@ namespace AndroidSyncControl.UI.Controls
 
             if (MessageBox.Show(confirmMsg, title, MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
-                SetStatus(Localization.LanguageManager.GetString("Str.Status.Rebooting"));
+                SetProcessing(true, Localization.LanguageManager.GetString("Str.Status.Rebooting"));
                 await ShopeeBypassService.RebootAsync(ActiveDeviceId);
             }
         }
 
         private async void btn_screenshot_Click(object sender, RoutedEventArgs e)
         {
-            SetStatus(Localization.LanguageManager.GetString("Str.Status.Capturing"));
+            SetProcessing(true, Localization.LanguageManager.GetString("Str.Status.Capturing"));
             string shotDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "screenshots");
             await ShopeeBypassService.TakeScreenshotAsync(ActiveDeviceId, shotDir);
-            SetStatus(Localization.LanguageManager.GetString("Str.Status.Done"));
+            SetProcessing(false, Localization.LanguageManager.GetString("Str.Status.Done"));
             try { Process.Start(new ProcessStartInfo("explorer.exe", shotDir) { UseShellExecute = true }); } catch { }
         }
 
         private void btn_send_text_Click(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                // Bấm nút: Lấy text từ clipboard Windows dán thẳng vào ô input
-                string clipText = ShopeeBypassService.SafeGetClipboardText()?.Trim();
-
-                string text = clipText;
-                if (!string.IsNullOrEmpty(text))
-                {
-                    txt_input.Text = text;
-                }
-                else
-                {
-                    text = txt_input.Text?.Trim();
-                }
-
-                if (string.IsNullOrEmpty(text))
-                {
-                    SetStatus(Localization.LanguageManager.GetString("Str.Status.EmptyClipboard"));
-                    return;
-                }
-
-                // Gọi hàm paste chuẩn duy nhất của Ctrl+V
-                RequestPasteToDevice?.Invoke(text);
-            }
-            catch (Exception ex)
-            {
-                SetStatus($"Error: {ex.Message}");
-            }
+            SendTextFromInput();
         }
 
         private void txt_input_KeyDown(object sender, KeyEventArgs e)
@@ -136,16 +209,32 @@ namespace AndroidSyncControl.UI.Controls
             if (e.Key == Key.Enter)
             {
                 e.Handled = true;
-                string text = txt_input.Text?.Trim();
-                if (!string.IsNullOrEmpty(text))
-                {
-                    RequestPasteToDevice?.Invoke(text);
-                }
+                SendTextFromInput();
             }
+        }
+
+        /// <summary>
+        /// Sends the typed text from the input box to the device.
+        /// Preserves the text in the input box so the user can reuse, edit, or delete as desired.
+        /// Empty input → no-op (never falls back to Windows clipboard).
+        /// </summary>
+        private void SendTextFromInput()
+        {
+            string text = txt_input.Text?.Trim() ?? string.Empty;
+            if (string.IsNullOrEmpty(text)) return;
+
+            // Do NOT clear — keep the text intact for user reuse/editing
+            RequestPasteToDevice?.Invoke(text);
         }
 
         private async void btn_install_apk_Click(object sender, RoutedEventArgs e)
         {
+            if (string.IsNullOrEmpty(ActiveDeviceId))
+            {
+                SetProcessing(false, Localization.LanguageManager.GetString("Str.Status.NotConnected"), isError: true);
+                return;
+            }
+
             var dlg = new OpenFileDialog
             {
                 Filter = "Android APK (*.apk)|*.apk|All files (*.*)|*.*",
@@ -153,114 +242,104 @@ namespace AndroidSyncControl.UI.Controls
             };
             if (dlg.ShowDialog() == true)
             {
-                SetStatus(Localization.LanguageManager.GetString("Str.Status.Installing"));
-                await ShopeeBypassService.InstallApkAsync(ActiveDeviceId, dlg.FileName);
-                SetStatus(Localization.LanguageManager.GetString("Str.Status.Done"));
+                btn_install_apk.IsEnabled = false;
+                try
+                {
+                    string apkName = Path.GetFileName(dlg.FileName) ?? "APK";
+                    SetProcessing(true, $"Đang cài {apkName}...");
+
+                    var result = await ShopeeBypassService.InstallApkDetailedAsync(ActiveDeviceId, dlg.FileName, s =>
+                    {
+                        SetProcessing(true, s);
+                    });
+
+                    if (result.Success)
+                    {
+                        SetProcessing(false, Localization.LanguageManager.GetString("Str.Status.InstallSuccess"));
+                    }
+                    else
+                    {
+                        SetProcessing(false, string.Format(Localization.LanguageManager.GetString("Str.Status.InstallFailed"), result.Message), isError: true);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    SetProcessing(false, $"Lỗi: {ex.Message}", isError: true);
+                }
+                finally
+                {
+                    btn_install_apk.IsEnabled = true;
+                }
             }
         }
 
         private void btn_backup_restore_Click(object sender, RoutedEventArgs e)
         {
-            SetStatus(Localization.LanguageManager.GetString("Str.Status.Ready"));
+            if (string.IsNullOrEmpty(ActiveDeviceId))
+            {
+                SetProcessing(false, Localization.LanguageManager.GetString("Str.Status.NotConnected"), isError: true);
+                return;
+            }
+
+            var dlg = new BackupRestoreDialog(ActiveDeviceId, Window.GetWindow(this));
+            dlg.ShowDialog();
         }
 
-        private async void btn_proxy_Click(object sender, RoutedEventArgs e)
+        private void btn_proxy_Click(object sender, RoutedEventArgs e)
         {
-            string current = await ShopeeBypassService.RunAdbAsync(ActiveDeviceId, "shell settings get global http_proxy");
-            string prompt = string.IsNullOrWhiteSpace(current) || current == "null" || current == ":0"
-                ? Localization.LanguageManager.GetString("Str.Dialog.ProxyEmptyPrompt")
-                : string.Format(Localization.LanguageManager.GetString("Str.Dialog.ProxyCurrentPrompt"), current);
+            if (string.IsNullOrEmpty(ActiveDeviceId))
+            {
+                SetProcessing(false, Localization.LanguageManager.GetString("Str.Status.NotConnected"), isError: true);
+                return;
+            }
 
-            var dlg = new Window
-            {
-                Title = Localization.LanguageManager.GetString("Str.Action.Proxy"),
-                Width = 360,
-                Height = 160,
-                WindowStartupLocation = WindowStartupLocation.CenterScreen,
-                ResizeMode = ResizeMode.NoResize,
-                Background = System.Windows.Media.Brushes.White
-            };
-            var sp = new StackPanel { Margin = new Thickness(14) };
-            var lbl = new TextBlock
-            {
-                Text = prompt,
-                Margin = new Thickness(0, 0, 0, 8),
-                Foreground = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFromString("#334155")
-            };
-            var txt = new TextBox { Height = 32, Padding = new Thickness(6, 4, 6, 4), FontSize = 13 };
-            var btnOk = new Button
-            {
-                Content = Localization.LanguageManager.GetString("Str.Dialog.Apply"),
-                Width = 96,
-                Height = 32,
-                HorizontalAlignment = HorizontalAlignment.Right,
-                Margin = new Thickness(0, 12, 0, 0),
-                Style = (Style)Application.Current.FindResource("PrimaryButton"),
-                IsEnabled = !string.IsNullOrWhiteSpace(txt.Text)
-            };
-
-            txt.TextChanged += (s, ev) =>
-            {
-                btnOk.IsEnabled = !string.IsNullOrWhiteSpace(txt.Text);
-            };
-
-            btnOk.Click += async (s, ev) =>
-            {
-                string input = txt.Text.Trim();
-                await ShopeeBypassService.SetProxyAsync(ActiveDeviceId, input);
-                dlg.Close();
-                SetStatus(string.IsNullOrEmpty(input) 
-                    ? Localization.LanguageManager.GetString("Str.Status.ProxyCleared") 
-                    : $"Proxy: {input} ✓");
-            };
-
-            sp.Children.Add(lbl);
-            sp.Children.Add(txt);
-            sp.Children.Add(btnOk);
-            dlg.Content = sp;
-            txt.Focus();
+            var dlg = new ProxyDialog(ActiveDeviceId, Window.GetWindow(this));
             dlg.ShowDialog();
         }
 
         private void btn_adb_cmd_Click(object sender, RoutedEventArgs e)
         {
-            try
+            if (string.IsNullOrEmpty(ActiveDeviceId))
             {
-                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-                string devArg = !string.IsNullOrEmpty(ActiveDeviceId) ? $"-s {ActiveDeviceId} " : "";
+                SetProcessing(false, Localization.LanguageManager.GetString("Str.Status.NotConnected"), isError: true);
+                return;
+            }
 
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "cmd.exe",
-                    Arguments = $"/k \"title ADB Shell [{ActiveDeviceId}] && echo ADB Shell [{ActiveDeviceId}] && adb {devArg}shell\"",
-                    WorkingDirectory = baseDir,
-                    UseShellExecute = true
-                });
-                SetStatus("ADB Shell ✓");
-            }
-            catch (Exception ex)
-            {
-                SetStatus($"Error: {ex.Message}");
-            }
+            var dlg = new AdbConsoleDialog(ActiveDeviceId, Window.GetWindow(this));
+            dlg.ShowDialog();
         }
 
         private async void btn_open_shopee_Click(object sender, RoutedEventArgs e)
         {
-            SetStatus(Localization.LanguageManager.GetString("Str.Status.OpeningShopee"));
+            if (string.IsNullOrEmpty(ActiveDeviceId))
+            {
+                SetProcessing(false, Localization.LanguageManager.GetString("Str.Status.NotConnected"), isError: true);
+                return;
+            }
+
+            SetProcessing(true, Localization.LanguageManager.GetString("Str.Status.OpeningShopee"));
             await ShopeeBypassService.OpenShopeeAsync(ActiveDeviceId);
-            SetStatus("Shopee ✓");
+            SetProcessing(false, "Shopee ✓");
         }
 
         private async void btn_bypass_Click(object sender, RoutedEventArgs e)
         {
+            if (string.IsNullOrEmpty(ActiveDeviceId))
+            {
+                SetProcessing(false, Localization.LanguageManager.GetString("Str.Status.NotConnected"), isError: true);
+                return;
+            }
+
             btn_bypass.IsEnabled = false;
             try
             {
-                await ShopeeBypassService.BypassShopeeAsync(ActiveDeviceId, s => SetStatus(s));
+                SetProcessing(true, Localization.LanguageManager.GetString("Str.Bypass.Step1"));
+                await ShopeeBypassService.BypassShopeeAsync(ActiveDeviceId, s => SetProcessing(true, s));
+                SetProcessing(false, Localization.LanguageManager.GetString("Str.Bypass.Done"));
             }
             catch (Exception ex)
             {
-                SetStatus($"Error: {ex.Message}");
+                SetProcessing(false, $"Error: {ex.Message}", isError: true);
             }
             finally
             {
@@ -270,11 +349,27 @@ namespace AndroidSyncControl.UI.Controls
 
         private async void btn_rotate_ip_Click(object sender, RoutedEventArgs e)
         {
+            if (string.IsNullOrEmpty(ActiveDeviceId))
+            {
+                SetProcessing(false, Localization.LanguageManager.GetString("Str.Status.NotConnected"), isError: true);
+                return;
+            }
+
             btn_rotate_ip.IsEnabled = false;
-            SetStatus(Localization.LanguageManager.GetString("Str.Status.RotatingIp"));
-            await ShopeeBypassService.RotateAirplaneModeAsync(ActiveDeviceId);
-            SetStatus("IP ✓");
-            btn_rotate_ip.IsEnabled = true;
+            try
+            {
+                SetProcessing(true, Localization.LanguageManager.GetString("Str.Status.RotatingIp"));
+                await ShopeeBypassService.RotateAirplaneModeAsync(ActiveDeviceId);
+                SetProcessing(false, "IP ✓");
+            }
+            catch (Exception ex)
+            {
+                SetProcessing(false, $"Lỗi: {ex.Message}", isError: true);
+            }
+            finally
+            {
+                btn_rotate_ip.IsEnabled = true;
+            }
         }
 
         private async void btn_nav_menu_Click(object sender, RoutedEventArgs e)
@@ -302,7 +397,7 @@ namespace AndroidSyncControl.UI.Controls
                 string url = Singleton.Setting.Setting.UpdateManifestUrl;
                 if (string.IsNullOrWhiteSpace(url))
                 {
-                    url = "https://raw.githubusercontent.com/Phuc710/AndroidSyncControl/main/release/update-manifest.json";
+                    url = AndroidSyncControl.Infrastructure.AppPaths.DefaultManifestUrl;
                 }
 
                 var manifest = await App.UpdateService.CheckForUpdateAsync(url);
