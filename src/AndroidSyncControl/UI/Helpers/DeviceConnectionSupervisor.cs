@@ -66,6 +66,7 @@ namespace AndroidSyncControl.UI.Helpers
 
         // Window Embedding Delegate
         public Func<IntPtr, bool> EmbedScrcpyAction { get; set; }
+        public IntPtr ScrcpyHwnd => _scrcpyHwnd;
 
         private DeviceConnectionSupervisor() { }
 

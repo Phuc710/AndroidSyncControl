@@ -46,5 +46,21 @@ namespace AndroidSyncControl.Tests
             Assert.Equal("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", deserialized.Package.Sha256);
             Assert.Equal(2, deserialized.Release.Changelog.Count);
         }
+
+        [Theory]
+        [InlineData("1.2.0", "1.0.0", true)]
+        [InlineData("1.0.1", "1.0.0.0", true)]
+        [InlineData("1.2.0-beta", "1.0.0", true)]
+        [InlineData("1.0.0", "1.0.0", false)]
+        [InlineData("1.0.0", "1.0.0.0", false)]
+        [InlineData("0.9.0", "1.0.0", false)]
+        [InlineData("", "1.0.0", false)]
+        [InlineData(null, "1.0.0", false)]
+        public void UpdateService_IsNewerVersion_EvaluatesCorrectly(string? remoteVer, string currentVerStr, bool expected)
+        {
+            var currentVer = Version.Parse(currentVerStr);
+            bool actual = UpdateService.IsNewerVersion(remoteVer, currentVer);
+            Assert.Equal(expected, actual);
+        }
     }
 }

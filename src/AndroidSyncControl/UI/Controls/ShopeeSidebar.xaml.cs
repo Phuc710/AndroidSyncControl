@@ -14,6 +14,8 @@ namespace AndroidSyncControl.UI.Controls
     {
         public Func<string> GetCurrentDeviceId { get; set; }
         public Action RequestAutoFit { get; set; }
+        public Action RequestFocusScrcpy { get; set; }
+        public Action RequestPasteScrcpy { get; set; }
 
         public ShopeeSidebar()
         {
@@ -38,10 +40,9 @@ namespace AndroidSyncControl.UI.Controls
 
         private void ShopeeSidebar_Loaded(object sender, RoutedEventArgs e)
         {
-            SyncClipboardToInput();
         }
 
-        private void SetStatus(string msg)
+        public void SetStatus(string msg)
         {
             Dispatcher.BeginInvoke(new Action(() =>
             {
@@ -49,86 +50,91 @@ namespace AndroidSyncControl.UI.Controls
             }));
         }
 
-        public void SyncClipboardToInput()
-        {
-            try
-            {
-                if (Clipboard.ContainsText())
-                {
-                    string clip = Clipboard.GetText().Trim();
-                    if (!string.IsNullOrEmpty(clip) && string.IsNullOrEmpty(txt_input.Text))
-                    {
-                        txt_input.Text = clip;
-                    }
-                }
-            }
-            catch { }
-        }
-
-        private void txt_input_GotFocus(object sender, RoutedEventArgs e)
-        {
-            SyncClipboardToInput();
-            txt_input.SelectAll();
-        }
-
         private async void btn_info_Click(object sender, RoutedEventArgs e)
         {
-            SetStatus("Đang đọc thông số...");
+            SetStatus(Localization.LanguageManager.GetString("Str.Status.Ready"));
             string info = await ShopeeBypassService.GetPhoneInfoAsync(ActiveDeviceId);
-            MessageBox.Show(info, "Thông Tin Thiết Bị", MessageBoxButton.OK, MessageBoxImage.Information);
-            SetStatus("Ready");
+            MessageBox.Show(info, Localization.LanguageManager.GetString("Str.Action.Info"), MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void btn_fit_screen_Click(object sender, RoutedEventArgs e)
         {
             RequestAutoFit?.Invoke();
-            SetStatus("Fit window ✓");
+            SetStatus(Localization.LanguageManager.GetString("Str.Status.Done"));
         }
 
         private async void btn_power_Click(object sender, RoutedEventArgs e)
         {
             await ShopeeBypassService.PowerAsync(ActiveDeviceId);
-            SetStatus("Power ✓");
+            SetStatus(Localization.LanguageManager.GetString("Str.Action.Power") + " ✓");
         }
 
         private async void btn_reboot_Click(object sender, RoutedEventArgs e)
         {
-            if (MessageBox.Show("Khởi động lại điện thoại?", "Xác nhận Reboot", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            string confirmMsg = Localization.LanguageManager.GetString("Str.Dialog.RebootConfirm");
+            string title = Localization.LanguageManager.GetString("Str.Action.Reboot");
+
+            if (MessageBox.Show(confirmMsg, title, MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
-                SetStatus("Rebooting device...");
+                SetStatus(Localization.LanguageManager.GetString("Str.Status.Rebooting"));
                 await ShopeeBypassService.RebootAsync(ActiveDeviceId);
             }
         }
 
         private async void btn_screenshot_Click(object sender, RoutedEventArgs e)
         {
-            SetStatus("Đang chụp màn hình...");
+            SetStatus(Localization.LanguageManager.GetString("Str.Status.Capturing"));
             string shotDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "screenshots");
             await ShopeeBypassService.TakeScreenshotAsync(ActiveDeviceId, shotDir);
-            SetStatus("Ảnh đã lưu vào screenshots/ ✓");
+            SetStatus(Localization.LanguageManager.GetString("Str.Status.Done"));
             try { Process.Start(new ProcessStartInfo("explorer.exe", shotDir) { UseShellExecute = true }); } catch { }
         }
 
-
         private async void btn_send_text_Click(object sender, RoutedEventArgs e)
         {
-            string text = txt_input.Text.Trim();
-            if (string.IsNullOrEmpty(text) && Clipboard.ContainsText())
+            try
             {
-                text = Clipboard.GetText().Trim();
-                txt_input.Text = text;
-            }
+                string text = txt_input.Text;
+                if (string.IsNullOrEmpty(text) && Clipboard.ContainsText())
+                {
+                    text = Clipboard.GetText() ?? string.Empty;
+                    txt_input.Text = text;
+                }
 
-            if (!string.IsNullOrEmpty(text))
-            {
-                SetStatus("Đang gửi text vào máy...");
-                await ShopeeBypassService.PasteTextAsync(ActiveDeviceId, text);
-                string preview = text.Length > 15 ? text.Substring(0, 15) + "..." : text;
-                SetStatus($"Đã gõ: \"{preview}\" ✓");
+                if (string.IsNullOrEmpty(text))
+                {
+                    SetStatus(Localization.LanguageManager.GetString("Str.Status.EmptyClipboard"));
+                    return;
+                }
+
+                string deviceId = ActiveDeviceId;
+                if (string.IsNullOrEmpty(deviceId))
+                {
+                    SetStatus(Localization.LanguageManager.GetString("Str.Status.NotConnected"));
+                    return;
+                }
+
+                // Ensure Windows Clipboard holds the exact text
+                try
+                {
+                    Clipboard.SetText(text);
+                }
+                catch { }
+
+                SetStatus(Localization.LanguageManager.GetString("Str.Status.Pasting"));
+                if (RequestPasteScrcpy != null)
+                {
+                    RequestPasteScrcpy.Invoke();
+                }
+                else
+                {
+                    await ShopeeBypassService.DirectClipboardPasteAsync(deviceId, text);
+                }
+                SetStatus(Localization.LanguageManager.GetString("Str.Status.Done"));
             }
-            else
+            catch (Exception ex)
             {
-                SetStatus("Chưa có chữ để gửi!");
+                SetStatus($"Error: {ex.Message}");
             }
         }
 
@@ -141,65 +147,38 @@ namespace AndroidSyncControl.UI.Controls
             }
         }
 
-        private async void btn_paste_direct_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                string text = txt_input.Text.Trim();
-                if (string.IsNullOrEmpty(text) && Clipboard.ContainsText())
-                {
-                    text = Clipboard.GetText().Trim();
-                    txt_input.Text = text;
-                }
-
-                if (!string.IsNullOrEmpty(text))
-                {
-                    SetStatus("Đang dán vào điện thoại...");
-                    await ShopeeBypassService.PasteTextAsync(ActiveDeviceId, text);
-                    string preview = text.Length > 15 ? text.Substring(0, 15) + "..." : text;
-                    SetStatus($"Đã dán: \"{preview}\" ✓");
-                    return;
-                }
-                SetStatus("Clipboard & Ô nhập đang trống!");
-            }
-            catch (Exception ex)
-            {
-                SetStatus($"Lỗi dán: {ex.Message}");
-            }
-        }
-
         private async void btn_install_apk_Click(object sender, RoutedEventArgs e)
         {
             var dlg = new OpenFileDialog
             {
                 Filter = "Android APK (*.apk)|*.apk|All files (*.*)|*.*",
-                Title = "Chọn file APK để cài đặt vào điện thoại"
+                Title = Localization.LanguageManager.GetString("Str.Action.InstallApk")
             };
             if (dlg.ShowDialog() == true)
             {
-                SetStatus("Đang cài đặt APK...");
+                SetStatus(Localization.LanguageManager.GetString("Str.Status.Installing"));
                 await ShopeeBypassService.InstallApkAsync(ActiveDeviceId, dlg.FileName);
-                SetStatus("Cài đặt APK hoàn tất!");
+                SetStatus(Localization.LanguageManager.GetString("Str.Status.Done"));
             }
         }
 
         private void btn_backup_restore_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Backup/Restore Profiles Shopee và Account Storage đã sẵn sàng!", "Backup / Restore", MessageBoxButton.OK, MessageBoxImage.Information);
+            SetStatus(Localization.LanguageManager.GetString("Str.Status.Ready"));
         }
 
         private async void btn_proxy_Click(object sender, RoutedEventArgs e)
         {
             string current = await ShopeeBypassService.RunAdbAsync(ActiveDeviceId, "shell settings get global http_proxy");
             string prompt = string.IsNullOrWhiteSpace(current) || current == "null" || current == ":0"
-                ? "Nhập Proxy dạng host:port (Để trống để gỡ proxy):"
-                : $"Proxy hiện tại: {current}\nNhập host:port mới hoặc để trống để gỡ:";
+                ? Localization.LanguageManager.GetString("Str.Dialog.ProxyEmptyPrompt")
+                : string.Format(Localization.LanguageManager.GetString("Str.Dialog.ProxyCurrentPrompt"), current);
 
             var dlg = new Window
             {
-                Title = "Fake Proxy Manager",
-                Width = 380,
-                Height = 170,
+                Title = Localization.LanguageManager.GetString("Str.Action.Proxy"),
+                Width = 360,
+                Height = 160,
                 WindowStartupLocation = WindowStartupLocation.CenterScreen,
                 ResizeMode = ResizeMode.NoResize,
                 Background = System.Windows.Media.Brushes.White
@@ -214,7 +193,7 @@ namespace AndroidSyncControl.UI.Controls
             var txt = new TextBox { Height = 32, Padding = new Thickness(6, 4, 6, 4), FontSize = 13 };
             var btnOk = new Button
             {
-                Content = "Áp Dụng",
+                Content = Localization.LanguageManager.GetString("Str.Dialog.Apply"),
                 Width = 96,
                 Height = 32,
                 HorizontalAlignment = HorizontalAlignment.Right,
@@ -223,7 +202,6 @@ namespace AndroidSyncControl.UI.Controls
                 IsEnabled = !string.IsNullOrWhiteSpace(txt.Text)
             };
 
-            // Dynamic Enable/Disable: Disabled when empty, enabled when proxy text is entered
             txt.TextChanged += (s, ev) =>
             {
                 btnOk.IsEnabled = !string.IsNullOrWhiteSpace(txt.Text);
@@ -234,7 +212,9 @@ namespace AndroidSyncControl.UI.Controls
                 string input = txt.Text.Trim();
                 await ShopeeBypassService.SetProxyAsync(ActiveDeviceId, input);
                 dlg.Close();
-                SetStatus(string.IsNullOrEmpty(input) ? "Đã gỡ Proxy!" : $"Proxy: {input}");
+                SetStatus(string.IsNullOrEmpty(input) 
+                    ? Localization.LanguageManager.GetString("Str.Status.ProxyCleared") 
+                    : $"Proxy: {input} ✓");
             };
 
             sp.Children.Add(lbl);
@@ -255,23 +235,23 @@ namespace AndroidSyncControl.UI.Controls
                 Process.Start(new ProcessStartInfo
                 {
                     FileName = "cmd.exe",
-                    Arguments = $"/k \"title ADB Shell [{ActiveDeviceId}] && echo ======================================== && echo  ADB SHELL CONNECTED TO: {ActiveDeviceId} && echo ======================================== && adb {devArg}shell\"",
+                    Arguments = $"/k \"title ADB Shell [{ActiveDeviceId}] && echo ADB Shell [{ActiveDeviceId}] && adb {devArg}shell\"",
                     WorkingDirectory = baseDir,
                     UseShellExecute = true
                 });
-                SetStatus("Đã mở ADB Shell ✓");
+                SetStatus("ADB Shell ✓");
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Không thể mở ADB: {ex.Message}");
+                SetStatus($"Error: {ex.Message}");
             }
         }
 
         private async void btn_open_shopee_Click(object sender, RoutedEventArgs e)
         {
-            SetStatus("Đang mở Shopee...");
+            SetStatus(Localization.LanguageManager.GetString("Str.Status.OpeningShopee"));
             await ShopeeBypassService.OpenShopeeAsync(ActiveDeviceId);
-            SetStatus("Đã mở Shopee ✓");
+            SetStatus("Shopee ✓");
         }
 
         private async void btn_bypass_Click(object sender, RoutedEventArgs e)
@@ -283,7 +263,7 @@ namespace AndroidSyncControl.UI.Controls
             }
             catch (Exception ex)
             {
-                SetStatus($"Lỗi: {ex.Message}");
+                SetStatus($"Error: {ex.Message}");
             }
             finally
             {
@@ -294,9 +274,9 @@ namespace AndroidSyncControl.UI.Controls
         private async void btn_rotate_ip_Click(object sender, RoutedEventArgs e)
         {
             btn_rotate_ip.IsEnabled = false;
-            SetStatus("Đang xoay IP 4G...");
+            SetStatus(Localization.LanguageManager.GetString("Str.Status.RotatingIp"));
             await ShopeeBypassService.RotateAirplaneModeAsync(ActiveDeviceId);
-            SetStatus("IP 4G rotated ✓");
+            SetStatus("IP ✓");
             btn_rotate_ip.IsEnabled = true;
         }
 
@@ -313,6 +293,47 @@ namespace AndroidSyncControl.UI.Controls
         private async void btn_nav_back_Click(object sender, RoutedEventArgs e)
         {
             await ShopeeBypassService.SendKeyAsync(ActiveDeviceId, 4); // KEYCODE_BACK
+        }
+
+        private async void btn_check_update_Click(object sender, RoutedEventArgs e)
+        {
+            btn_check_update.IsEnabled = false;
+            SetStatus(Localization.LanguageManager.GetString("Str.Update.Checking"));
+
+            try
+            {
+                string url = Singleton.Setting.Setting.UpdateManifestUrl;
+                if (string.IsNullOrWhiteSpace(url))
+                {
+                    url = "https://raw.githubusercontent.com/Phuc710/AndroidSyncControl/main/release/update-manifest.json";
+                }
+
+                var manifest = await App.UpdateService.CheckForUpdateAsync(url);
+                if (manifest != null)
+                {
+                    SetStatus($"v{manifest.Version} ✓");
+
+                    var dlg = new UpdateDialog(manifest, App.UpdateService)
+                    {
+                        Owner = Window.GetWindow(this)
+                    };
+                    dlg.ShowDialog();
+                }
+                else
+                {
+                    string currentVer = Update.UpdateService.CurrentVersion.ToString(3);
+                    string upToDateText = Localization.LanguageManager.GetString("Str.Update.UpToDate");
+                    SetStatus($"{upToDateText} ({currentVer}) ✓");
+                }
+            }
+            catch (Exception ex)
+            {
+                SetStatus($"Update: {ex.Message}");
+            }
+            finally
+            {
+                btn_check_update.IsEnabled = true;
+            }
         }
     }
 }

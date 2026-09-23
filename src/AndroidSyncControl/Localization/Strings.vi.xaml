@@ -2,42 +2,103 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime">
 
-    <!-- ================= Title bar ================= -->
+    <!-- ================= Window & Title Bar ================= -->
     <sys:String x:Key="Str.Btn.About">Giới thiệu</sys:String>
     <sys:String x:Key="Str.Tip.Minimize">Thu nhỏ</sys:String>
     <sys:String x:Key="Str.Tip.Maximize">Phóng to</sys:String>
     <sys:String x:Key="Str.Tip.Close">Đóng</sys:String>
 
-    <!-- Theme button tooltip (set from code-behind) -->
-    <sys:String x:Key="Str.Theme.Light">Giao diện: Sáng (bấm để đổi)</sys:String>
-    <sys:String x:Key="Str.Theme.Dark">Giao diện: Tối (bấm để đổi)</sys:String>
-    <sys:String x:Key="Str.Theme.System">Giao diện: Theo hệ thống (bấm để đổi)</sys:String>
+    <!-- Theme -->
+    <sys:String x:Key="Str.Theme.Light">Sáng</sys:String>
+    <sys:String x:Key="Str.Theme.Dark">Tối</sys:String>
+    <sys:String x:Key="Str.Theme.System">Hệ thống</sys:String>
 
-    <!-- ================= Toolbar ================= -->
-    <sys:String x:Key="Str.Toolbar.Device">Thiết bị</sys:String>
-    <sys:String x:Key="Str.Combo.SelectDevice">Chọn thiết bị…</sys:String>
-    <sys:String x:Key="Str.Btn.ShowMain">Hiện chính</sys:String>
-    <sys:String x:Key="Str.Btn.ShowListView">Hiện ở lưới</sys:String>
-    <sys:String x:Key="Str.Btn.ShowAllListView">Hiện tất cả ở lưới</sys:String>
-    <sys:String x:Key="Str.Toolbar.Size">Kích thước</sys:String>
-    <sys:String x:Key="Str.Toolbar.MaxFps">MaxFps</sys:String>
-    <sys:String x:Key="Str.Toolbar.MaxSize">MaxSize</sys:String>
-    <sys:String x:Key="Str.Toolbar.Gpu">GPU</sys:String>
-    <sys:String x:Key="Str.Toolbar.Audio">Âm thanh</sys:String>
+    <!-- ================= Connection Screen & States ================= -->
+    <sys:String x:Key="Str.Connect.Title">Kết nối thiết bị</sys:String>
+    <sys:String x:Key="Str.Connect.Detail">Cắm cáp USB và bật chế độ gỡ lỗi USB.</sys:String>
+    <sys:String x:Key="Str.Connect.InitDetail">Đang khởi tạo ADB...</sys:String>
+    <sys:String x:Key="Str.Connect.Initializing">Khởi tạo...</sys:String>
+    <sys:String x:Key="Str.Connect.Searching">Đang tìm thiết bị...</sys:String>
+    <sys:String x:Key="Str.Connect.Connecting">Đang kết nối...</sys:String>
+    <sys:String x:Key="Str.Connect.Connected">Đã kết nối</sys:String>
+    <sys:String x:Key="Str.Connect.Disconnected">Mất kết nối</sys:String>
+    <sys:String x:Key="Str.Connect.Reconnecting">Đang kết nối lại...</sys:String>
+    <sys:String x:Key="Str.Connect.AdbUnavailable">Không thể mở ADB</sys:String>
+    <sys:String x:Key="Str.Connect.AdbError">Lỗi ADB</sys:String>
+    <sys:String x:Key="Str.Connect.NoDevice">Chưa kết nối thiết bị</sys:String>
 
-    <sys:String x:Key="Str.Tip.MaxFps">Giới hạn FPS tối đa của video (hiệu lực 1–120). Áp dụng khi kết nối lại.</sys:String>
-    <sys:String x:Key="Str.Tip.MaxSize">Giới hạn cạnh dài nhất của video (px, bội số 8). Dưới 360 = không giới hạn (kích thước gốc). Áp dụng khi kết nối lại.</sys:String>
-    <sys:String x:Key="Str.Tip.Gpu">Bật: dùng GPU giải mã (D3D11VA). Tắt: dùng CPU (none). Áp dụng khi kết nối lại.</sys:String>
-    <sys:String x:Key="Str.Tip.Audio">Bật: nhận và giải mã luồng âm thanh từ thiết bị. Áp dụng khi kết nối lại.</sys:String>
+    <!-- ================= Sidebar Sections ================= -->
+    <sys:String x:Key="Str.Sec.Device">THIẾT BỊ</sys:String>
+    <sys:String x:Key="Str.Sec.Clipboard">CLIPBOARD</sys:String>
+    <sys:String x:Key="Str.Sec.Files">TỆP TIN</sys:String>
+    <sys:String x:Key="Str.Sec.Network">MẠNG</sys:String>
+    <sys:String x:Key="Str.Sec.Shopee">SHOPEE</sys:String>
+    <sys:String x:Key="Str.Sec.System">HỆ THỐNG</sys:String>
 
-    <!-- ================= Device panels ================= -->
-    <sys:String x:Key="Str.Btn.Disconnect">Ngắt</sys:String>
-    <sys:String x:Key="Str.Check.Sync">Đồng bộ</sys:String>
-    <sys:String x:Key="Str.Check.Speaker">Loa</sys:String>
-    <sys:String x:Key="Str.Tip.Speaker">Bật: phát âm thanh thiết bị ra loa PC. Tắt: không phát (bỏ qua dòng âm thanh).</sys:String>
+    <!-- ================= Sidebar Actions ================= -->
+    <sys:String x:Key="Str.Action.Info">Thông tin máy</sys:String>
+    <sys:String x:Key="Str.Action.FitScreen">Căn màn hình</sys:String>
+    <sys:String x:Key="Str.Action.Power">Nguồn</sys:String>
+    <sys:String x:Key="Str.Action.Reboot">Khởi động lại</sys:String>
+    <sys:String x:Key="Str.Action.Screenshot">Chụp màn hình</sys:String>
+    <sys:String x:Key="Str.Action.Send">Gửi</sys:String>
+    <sys:String x:Key="Str.Action.InstallApk">Cài APK</sys:String>
+    <sys:String x:Key="Str.Action.BackupRestore">Sao lưu / Khôi phục</sys:String>
+    <sys:String x:Key="Str.Action.Proxy">Proxy</sys:String>
+    <sys:String x:Key="Str.Action.AdbShell">ADB Shell</sys:String>
+    <sys:String x:Key="Str.Action.RotateIp">Đổi IP (4G)</sys:String>
+    <sys:String x:Key="Str.Action.OpenShopee">Mở Shopee</sys:String>
+    <sys:String x:Key="Str.Action.BypassShopee">Bypass Shopee</sys:String>
+    <sys:String x:Key="Str.Action.CheckUpdate">Kiểm tra cập nhật</sys:String>
 
-    <!-- ================= About dialog ================= -->
+    <!-- ================= Status Messages ================= -->
+    <sys:String x:Key="Str.Status.Ready">Sẵn sàng</sys:String>
+    <sys:String x:Key="Str.Status.Done">Hoàn tất ✓</sys:String>
+    <sys:String x:Key="Str.Status.EmptyClipboard">Clipboard trống</sys:String>
+    <sys:String x:Key="Str.Status.NotConnected">Chưa kết nối</sys:String>
+    <sys:String x:Key="Str.Status.Pasting">Đang dán...</sys:String>
+    <sys:String x:Key="Str.Status.Capturing">Đang chụp...</sys:String>
+    <sys:String x:Key="Str.Status.Rebooting">Đang khởi động lại...</sys:String>
+    <sys:String x:Key="Str.Status.Installing">Đang cài đặt...</sys:String>
+    <sys:String x:Key="Str.Status.OpeningShopee">Đang mở Shopee...</sys:String>
+    <sys:String x:Key="Str.Status.RotatingIp">Đang đổi IP...</sys:String>
+    <sys:String x:Key="Str.Status.ProxyCleared">Đã xóa proxy ✓</sys:String>
+
+    <!-- ================= Dialogs ================= -->
+    <sys:String x:Key="Str.Dialog.RebootConfirm">Khởi động lại thiết bị?</sys:String>
+    <sys:String x:Key="Str.Dialog.ProxyEmptyPrompt">Nhập host:port (để trống để xóa):</sys:String>
+    <sys:String x:Key="Str.Dialog.ProxyCurrentPrompt">Proxy: {0}&#x0A;Nhập host:port mới:</sys:String>
+    <sys:String x:Key="Str.Dialog.Apply">Áp dụng</sys:String>
+
+    <!-- ================= Shopee Bypass Steps ================= -->
+    <sys:String x:Key="Str.Bypass.Step1">[1/6] Xóa session...</sys:String>
+    <sys:String x:Key="Str.Bypass.Step2">[2/6] Đổi Android ID...</sys:String>
+    <sys:String x:Key="Str.Bypass.Step3">[3/6] Reset Google Ads...</sys:String>
+    <sys:String x:Key="Str.Bypass.Step4">[4/6] Ngắt kết nối...</sys:String>
+    <sys:String x:Key="Str.Bypass.Step5">[5/6] Nhận IP mới...</sys:String>
+    <sys:String x:Key="Str.Bypass.Step6">[6/6] Khởi chạy Shopee...</sys:String>
+    <sys:String x:Key="Str.Bypass.Done">Bypass hoàn tất ✓</sys:String>
+
+    <!-- ================= Android Navigation Tooltips ================= -->
+    <sys:String x:Key="Str.Nav.Recent">Ứng dụng gần đây</sys:String>
+    <sys:String x:Key="Str.Nav.Home">Trang chính</sys:String>
+    <sys:String x:Key="Str.Nav.Back">Quay lại</sys:String>
+
+    <!-- ================= About Dialog ================= -->
     <sys:String x:Key="Str.About.Title">Giới thiệu</sys:String>
-    <sys:String x:Key="Str.About.Body">Android Sync Control&#x0A;&#x0A;Phản chiếu &amp; điều khiển nhiều thiết bị Android.&#x0A;Sử dụng scrcpy.</sys:String>
+    <sys:String x:Key="Str.About.Body">Android Sync Control&#x0A;&#x0A;Điều khiển &amp; đồng bộ đa thiết bị Android.</sys:String>
+
+    <!-- ================= Software Update ================= -->
+    <sys:String x:Key="Str.Update.Title">Cập nhật ứng dụng</sys:String>
+    <sys:String x:Key="Str.Update.Available">Bản mới</sys:String>
+    <sys:String x:Key="Str.Update.Current">Hiện tại</sys:String>
+    <sys:String x:Key="Str.Update.WhatsNew">Có gì mới</sys:String>
+    <sys:String x:Key="Str.Update.Later">Để sau</sys:String>
+    <sys:String x:Key="Str.Update.Now">Cập nhật ngay</sys:String>
+    <sys:String x:Key="Str.Update.Downloading">Đang tải...</sys:String>
+    <sys:String x:Key="Str.Update.Installing">Đang cài đặt...</sys:String>
+    <sys:String x:Key="Str.Update.Failed">Cập nhật thất bại</sys:String>
+    <sys:String x:Key="Str.Update.UpToDate">Đã cập nhật mới nhất</sys:String>
+    <sys:String x:Key="Str.Update.Checking">Đang kiểm tra...</sys:String>
 
 </ResourceDictionary>

@@ -34,71 +34,88 @@
 
             <!-- 2. Clean Minimal White Connection Screen -->
             <Grid x:Name="overlayPanel" Visibility="Visible" Background="#FFFFFF">
-                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="360" Margin="24">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="320" Margin="24">
                     
-                    <!-- Logo plain — no shadow, no border -->
-                    <Image Source="pack://application:,,,/Resources/phone_connect.png"
-                           Width="125" Height="125" Margin="0,0,0,16" HorizontalAlignment="Center"
-                           RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <!-- Sleek Vector Smartphone Graphic (Pure XAML, High-DPI Sharp) -->
+                    <Grid Width="96" Height="136" Margin="0,0,0,24" HorizontalAlignment="Center">
+                        <!-- Soft subtle backdrop glow -->
+                        <Ellipse Width="96" Height="96" VerticalAlignment="Center" HorizontalAlignment="Center" Fill="#F8FAFC"/>
+
+                        <!-- Phone chassis -->
+                        <Border Width="68" Height="120" Background="#FFFFFF" BorderBrush="#CBD5E1" BorderThickness="1.5" CornerRadius="16" SnapsToDevicePixels="True">
+                            <Grid>
+                                <!-- Camera / Speaker notch -->
+                                <Border Width="22" Height="3.5" Background="#CBD5E1" CornerRadius="1.5" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,6,0,0"/>
+
+                                <!-- Center USB Connection Glyph -->
+                                <Border Width="36" Height="36" Background="#EFF6FF" BorderBrush="#DBEAFE" BorderThickness="1" CornerRadius="18"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock Text="&#xE8B0;" FontFamily="Segoe MDL2 Assets" FontSize="16" Foreground="#2563EB" 
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,1,0,0"/>
+                                </Border>
+
+                                <!-- Bottom Home indicator -->
+                                <Border Width="26" Height="3" Background="#E2E8F0" CornerRadius="1.5" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
 
                     <!-- Title -->
                     <TextBlock x:Name="txtStatusTitle" 
-                               Text="Connect your Android device" 
-                               FontSize="17" FontWeight="SemiBold" Foreground="#1E293B" 
-                               HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,8"/>
+                               Text="{DynamicResource Str.Connect.Title}" 
+                               FontSize="16" FontWeight="SemiBold" Foreground="#0F172A" 
+                               HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,6"/>
 
                     <!-- Description / Instructions -->
                     <TextBlock x:Name="txtStatusDetail" 
-                               Text="Connect your phone via USB and make sure&#x0a;USB debugging is enabled." 
-                               FontSize="13" Foreground="#64748B" TextWrapping="Wrap" LineHeight="19"
-                               HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,20"/>
+                               Text="{DynamicResource Str.Connect.Detail}" 
+                               FontSize="12.5" Foreground="#64748B" TextWrapping="Wrap" LineHeight="18"
+                               HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,18"/>
 
-                    <!-- Subtle Status Indicator (Dot + Text) -->
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,12">
-                        <Ellipse x:Name="statusDot" Width="7" Height="7" Fill="#2563EB" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBlock x:Name="txtStatusState" Text="Searching for device..." 
-                                   FontSize="12.5" Foreground="#64748B" VerticalAlignment="Center"/>
-                    </StackPanel>
+                    <!-- Unified Minimal Status Pill -->
+                    <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="14" Padding="12,5" HorizontalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <!-- Hairline Circular Spinner Arc -->
+                            <Grid x:Name="progressBarStatus" Width="13" Height="13" Margin="0,0,7,0" VerticalAlignment="Center">
+                                <Grid.RenderTransform>
+                                    <RotateTransform x:Name="spinnerRotate" CenterX="6.5" CenterY="6.5" Angle="0"/>
+                                </Grid.RenderTransform>
+                                <Grid.Triggers>
+                                    <EventTrigger RoutedEvent="Loaded">
+                                        <BeginStoryboard>
+                                            <Storyboard RepeatBehavior="Forever">
+                                                <DoubleAnimation
+                                                    Storyboard.TargetName="spinnerRotate"
+                                                    Storyboard.TargetProperty="Angle"
+                                                    From="0" To="360"
+                                                    Duration="0:0:0.9"/>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </EventTrigger>
+                                </Grid.Triggers>
+                                <Ellipse Width="13" Height="13" Stroke="#E2E8F0" StrokeThickness="2" Fill="Transparent"/>
+                                <Path x:Name="spinnerArc" Fill="Transparent" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round">
+                                    <Path.Stroke>
+                                        <SolidColorBrush x:Name="spinnerBrush" Color="#2563EB"/>
+                                    </Path.Stroke>
+                                    <Path.Data>
+                                        <PathGeometry>
+                                            <PathFigure StartPoint="6.5,1" IsClosed="False">
+                                                <ArcSegment Point="12,6.5" Size="5.5,5.5" SweepDirection="Clockwise" IsLargeArc="False"/>
+                                            </PathFigure>
+                                        </PathGeometry>
+                                    </Path.Data>
+                                </Path>
+                            </Grid>
 
-                    <!-- Smooth Circular Spinner -->
-                    <Grid x:Name="progressBarStatus" Width="32" Height="32" HorizontalAlignment="Center" Margin="0,0,0,0">
-                        <Grid.RenderTransform>
-                            <RotateTransform x:Name="spinnerRotate" CenterX="16" CenterY="16" Angle="0"/>
-                        </Grid.RenderTransform>
-                        <Grid.Triggers>
-                            <EventTrigger RoutedEvent="Loaded">
-                                <BeginStoryboard>
-                                    <Storyboard RepeatBehavior="Forever">
-                                        <DoubleAnimation
-                                            Storyboard.TargetName="spinnerRotate"
-                                            Storyboard.TargetProperty="Angle"
-                                            From="0" To="360"
-                                            Duration="0:0:0.9"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </EventTrigger>
-                        </Grid.Triggers>
-                        <!-- Ring track -->
-                        <Ellipse Width="32" Height="32"
-                                 Stroke="#E2E8F0" StrokeThickness="3"
-                                 Fill="Transparent"/>
-                        <!-- Spinner arc — drawn as a thin Path arc segment -->
-                        <Path x:Name="spinnerArc" Fill="Transparent" StrokeThickness="3" StrokeStartLineCap="Round" StrokeEndLineCap="Round">
-                            <Path.Stroke>
-                                <SolidColorBrush x:Name="spinnerBrush" Color="#2563EB"/>
-                            </Path.Stroke>
-                            <Path.Data>
-                                <PathGeometry>
-                                    <PathFigure StartPoint="16,1" IsClosed="False">
-                                        <ArcSegment Point="31,16"
-                                                    Size="15,15"
-                                                    SweepDirection="Clockwise"
-                                                    IsLargeArc="False"/>
-                                    </PathFigure>
-                                </PathGeometry>
-                            </Path.Data>
-                        </Path>
-                    </Grid>
+                            <!-- Status Dot (visible when not spinning or on error/offline) -->
+                            <Ellipse x:Name="statusDot" Width="7" Height="7" Fill="#2563EB" VerticalAlignment="Center" Margin="0,0,7,0" Visibility="Collapsed"/>
+
+                            <!-- Text -->
+                            <TextBlock x:Name="txtStatusState" Text="{DynamicResource Str.Connect.Searching}" 
+                                       FontSize="12" FontWeight="Medium" Foreground="#475569" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </Grid>
         </Grid>

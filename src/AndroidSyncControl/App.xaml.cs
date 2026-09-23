@@ -43,9 +43,30 @@ namespace AndroidSyncControl
                     // Delay 3 seconds after startup to keep startup time ultra-fast
                     await Task.Delay(3000);
 
-                    // Check update manifest if configured
-                    // (Default fallback can be GitHub Releases or setting.json)
-                    // var manifest = await UpdateService.CheckForUpdateAsync("https://raw.githubusercontent.com/.../update-manifest.json");
+                    if (!Singleton.Setting.Setting.AutoCheckUpdate) return;
+
+                    string manifestUrl = Singleton.Setting.Setting.UpdateManifestUrl;
+                    if (string.IsNullOrWhiteSpace(manifestUrl))
+                    {
+                        manifestUrl = "https://raw.githubusercontent.com/Phuc710/AndroidSyncControl/main/release/update-manifest.json";
+                    }
+
+                    var manifest = await UpdateService.CheckForUpdateAsync(manifestUrl);
+                    if (manifest != null)
+                    {
+                        await Current.Dispatcher.InvokeAsync(() =>
+                        {
+                            var mainWindow = Current.MainWindow;
+                            if (mainWindow != null && mainWindow.IsVisible)
+                            {
+                                var dlg = new UI.UpdateDialog(manifest, UpdateService)
+                                {
+                                    Owner = mainWindow
+                                };
+                                dlg.ShowDialog();
+                            }
+                        });
+                    }
                 }
                 catch { }
             });

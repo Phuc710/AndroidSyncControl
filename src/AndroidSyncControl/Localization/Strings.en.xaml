@@ -2,42 +2,103 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime">
 
-    <!-- ================= Title bar ================= -->
+    <!-- ================= Window & Title Bar ================= -->
     <sys:String x:Key="Str.Btn.About">About</sys:String>
     <sys:String x:Key="Str.Tip.Minimize">Minimize</sys:String>
     <sys:String x:Key="Str.Tip.Maximize">Maximize</sys:String>
     <sys:String x:Key="Str.Tip.Close">Close</sys:String>
 
-    <!-- Theme button tooltip (set from code-behind) -->
-    <sys:String x:Key="Str.Theme.Light">Theme: Light (click to change)</sys:String>
-    <sys:String x:Key="Str.Theme.Dark">Theme: Dark (click to change)</sys:String>
-    <sys:String x:Key="Str.Theme.System">Theme: System (click to change)</sys:String>
+    <!-- Theme -->
+    <sys:String x:Key="Str.Theme.Light">Light</sys:String>
+    <sys:String x:Key="Str.Theme.Dark">Dark</sys:String>
+    <sys:String x:Key="Str.Theme.System">System</sys:String>
 
-    <!-- ================= Toolbar ================= -->
-    <sys:String x:Key="Str.Toolbar.Device">Device</sys:String>
-    <sys:String x:Key="Str.Combo.SelectDevice">Select device…</sys:String>
-    <sys:String x:Key="Str.Btn.ShowMain">Show Main</sys:String>
-    <sys:String x:Key="Str.Btn.ShowListView">Show ListView</sys:String>
-    <sys:String x:Key="Str.Btn.ShowAllListView">Show All in ListView</sys:String>
-    <sys:String x:Key="Str.Toolbar.Size">Size</sys:String>
-    <sys:String x:Key="Str.Toolbar.MaxFps">MaxFps</sys:String>
-    <sys:String x:Key="Str.Toolbar.MaxSize">MaxSize</sys:String>
-    <sys:String x:Key="Str.Toolbar.Gpu">GPU</sys:String>
-    <sys:String x:Key="Str.Toolbar.Audio">Audio</sys:String>
+    <!-- ================= Connection Screen & States ================= -->
+    <sys:String x:Key="Str.Connect.Title">Connect Device</sys:String>
+    <sys:String x:Key="Str.Connect.Detail">Connect via USB and enable USB debugging.</sys:String>
+    <sys:String x:Key="Str.Connect.InitDetail">Initializing ADB daemon...</sys:String>
+    <sys:String x:Key="Str.Connect.Initializing">Initializing...</sys:String>
+    <sys:String x:Key="Str.Connect.Searching">Searching for device...</sys:String>
+    <sys:String x:Key="Str.Connect.Connecting">Connecting...</sys:String>
+    <sys:String x:Key="Str.Connect.Connected">Connected</sys:String>
+    <sys:String x:Key="Str.Connect.Disconnected">Disconnected</sys:String>
+    <sys:String x:Key="Str.Connect.Reconnecting">Reconnecting...</sys:String>
+    <sys:String x:Key="Str.Connect.AdbUnavailable">ADB Unavailable</sys:String>
+    <sys:String x:Key="Str.Connect.AdbError">ADB Error</sys:String>
+    <sys:String x:Key="Str.Connect.NoDevice">No Device Connected</sys:String>
 
-    <sys:String x:Key="Str.Tip.MaxFps">Limit the video's maximum FPS (effective 1–120). Applied on reconnect.</sys:String>
-    <sys:String x:Key="Str.Tip.MaxSize">Limit the video's longest edge (px, multiple of 8). Below 360 = unlimited (native size). Applied on reconnect.</sys:String>
-    <sys:String x:Key="Str.Tip.Gpu">On: GPU decoding (D3D11VA). Off: CPU (none). Applied on reconnect.</sys:String>
-    <sys:String x:Key="Str.Tip.Audio">On: receive and decode the device's audio stream. Applied on reconnect.</sys:String>
+    <!-- ================= Sidebar Sections ================= -->
+    <sys:String x:Key="Str.Sec.Device">DEVICE</sys:String>
+    <sys:String x:Key="Str.Sec.Clipboard">CLIPBOARD</sys:String>
+    <sys:String x:Key="Str.Sec.Files">FILES</sys:String>
+    <sys:String x:Key="Str.Sec.Network">NETWORK</sys:String>
+    <sys:String x:Key="Str.Sec.Shopee">SHOPEE</sys:String>
+    <sys:String x:Key="Str.Sec.System">SYSTEM</sys:String>
 
-    <!-- ================= Device panels ================= -->
-    <sys:String x:Key="Str.Btn.Disconnect">Disconnect</sys:String>
-    <sys:String x:Key="Str.Check.Sync">Sync</sys:String>
-    <sys:String x:Key="Str.Check.Speaker">Speaker</sys:String>
-    <sys:String x:Key="Str.Tip.Speaker">On: play device audio through PC speakers. Off: muted (audio stream skipped).</sys:String>
+    <!-- ================= Sidebar Actions ================= -->
+    <sys:String x:Key="Str.Action.Info">Phone Info</sys:String>
+    <sys:String x:Key="Str.Action.FitScreen">Fit Screen</sys:String>
+    <sys:String x:Key="Str.Action.Power">Power</sys:String>
+    <sys:String x:Key="Str.Action.Reboot">Reboot</sys:String>
+    <sys:String x:Key="Str.Action.Screenshot">Screenshot</sys:String>
+    <sys:String x:Key="Str.Action.Send">Send</sys:String>
+    <sys:String x:Key="Str.Action.InstallApk">Install APK</sys:String>
+    <sys:String x:Key="Str.Action.BackupRestore">Backup / Restore</sys:String>
+    <sys:String x:Key="Str.Action.Proxy">Proxy</sys:String>
+    <sys:String x:Key="Str.Action.AdbShell">ADB Shell</sys:String>
+    <sys:String x:Key="Str.Action.RotateIp">Rotate IP (4G)</sys:String>
+    <sys:String x:Key="Str.Action.OpenShopee">Open Shopee</sys:String>
+    <sys:String x:Key="Str.Action.BypassShopee">Bypass Shopee</sys:String>
+    <sys:String x:Key="Str.Action.CheckUpdate">Check Update</sys:String>
 
-    <!-- ================= About dialog ================= -->
+    <!-- ================= Status Messages ================= -->
+    <sys:String x:Key="Str.Status.Ready">Ready</sys:String>
+    <sys:String x:Key="Str.Status.Done">Done ✓</sys:String>
+    <sys:String x:Key="Str.Status.EmptyClipboard">Clipboard empty</sys:String>
+    <sys:String x:Key="Str.Status.NotConnected">Not connected</sys:String>
+    <sys:String x:Key="Str.Status.Pasting">Pasting...</sys:String>
+    <sys:String x:Key="Str.Status.Capturing">Capturing...</sys:String>
+    <sys:String x:Key="Str.Status.Rebooting">Rebooting...</sys:String>
+    <sys:String x:Key="Str.Status.Installing">Installing...</sys:String>
+    <sys:String x:Key="Str.Status.OpeningShopee">Opening Shopee...</sys:String>
+    <sys:String x:Key="Str.Status.RotatingIp">Rotating IP...</sys:String>
+    <sys:String x:Key="Str.Status.ProxyCleared">Proxy cleared ✓</sys:String>
+
+    <!-- ================= Dialogs ================= -->
+    <sys:String x:Key="Str.Dialog.RebootConfirm">Reboot device?</sys:String>
+    <sys:String x:Key="Str.Dialog.ProxyEmptyPrompt">Host:port (empty to clear):</sys:String>
+    <sys:String x:Key="Str.Dialog.ProxyCurrentPrompt">Proxy: {0}&#x0A;New host:port:</sys:String>
+    <sys:String x:Key="Str.Dialog.Apply">Apply</sys:String>
+
+    <!-- ================= Shopee Bypass Steps ================= -->
+    <sys:String x:Key="Str.Bypass.Step1">[1/6] Cleaning session...</sys:String>
+    <sys:String x:Key="Str.Bypass.Step2">[2/6] Rotating Android ID...</sys:String>
+    <sys:String x:Key="Str.Bypass.Step3">[3/6] Resetting Google Ads...</sys:String>
+    <sys:String x:Key="Str.Bypass.Step4">[4/6] Disconnecting network...</sys:String>
+    <sys:String x:Key="Str.Bypass.Step5">[5/6] Acquiring new IP...</sys:String>
+    <sys:String x:Key="Str.Bypass.Step6">[6/6] Launching Shopee...</sys:String>
+    <sys:String x:Key="Str.Bypass.Done">Bypass completed ✓</sys:String>
+
+    <!-- ================= Android Navigation Tooltips ================= -->
+    <sys:String x:Key="Str.Nav.Recent">Recent Apps</sys:String>
+    <sys:String x:Key="Str.Nav.Home">Home</sys:String>
+    <sys:String x:Key="Str.Nav.Back">Back</sys:String>
+
+    <!-- ================= About Dialog ================= -->
     <sys:String x:Key="Str.About.Title">About</sys:String>
-    <sys:String x:Key="Str.About.Body">Android Sync Control&#x0A;&#x0A;Multi-device Android mirror &amp; control.&#x0A;Powered by scrcpy.</sys:String>
+    <sys:String x:Key="Str.About.Body">Android Sync Control&#x0A;&#x0A;Multi-device Android mirror &amp; control.</sys:String>
+
+    <!-- ================= Software Update ================= -->
+    <sys:String x:Key="Str.Update.Title">Software Update</sys:String>
+    <sys:String x:Key="Str.Update.Available">New</sys:String>
+    <sys:String x:Key="Str.Update.Current">Current</sys:String>
+    <sys:String x:Key="Str.Update.WhatsNew">What's new</sys:String>
+    <sys:String x:Key="Str.Update.Later">Later</sys:String>
+    <sys:String x:Key="Str.Update.Now">Update Now</sys:String>
+    <sys:String x:Key="Str.Update.Downloading">Downloading...</sys:String>
+    <sys:String x:Key="Str.Update.Installing">Installing...</sys:String>
+    <sys:String x:Key="Str.Update.Failed">Update failed</sys:String>
+    <sys:String x:Key="Str.Update.UpToDate">Up to date</sys:String>
+    <sys:String x:Key="Str.Update.Checking">Checking for updates...</sys:String>
 
 </ResourceDictionary>

@@ -38,13 +38,10 @@ namespace AndroidSyncControl.Update
                 var manifest = JsonSerializer.Deserialize<UpdateManifest>(json, JsonOptions);
                 if (manifest == null) return null;
 
-                if (Version.TryParse(manifest.Version, out var remoteVer))
+                if (IsNewerVersion(manifest.Version, CurrentVersion))
                 {
-                    if (remoteVer > CurrentVersion)
-                    {
-                        UpdateAvailable?.Invoke(manifest);
-                        return manifest;
-                    }
+                    UpdateAvailable?.Invoke(manifest);
+                    return manifest;
                 }
             }
             catch (Exception ex)
@@ -182,6 +179,26 @@ namespace AndroidSyncControl.Update
             string actual = BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
 
             return string.Equals(actual, expectedSha256.Trim(), StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static bool IsNewerVersion(string? remoteVersionStr, Version currentVersion)
+        {
+            if (string.IsNullOrWhiteSpace(remoteVersionStr)) return false;
+
+            string cleanRemote = remoteVersionStr.Trim().Split('-')[0];
+            if (!Version.TryParse(cleanRemote, out var remote)) return false;
+
+            int rMajor = remote.Major < 0 ? 0 : remote.Major;
+            int rMinor = remote.Minor < 0 ? 0 : remote.Minor;
+            int rBuild = remote.Build < 0 ? 0 : remote.Build;
+
+            int cMajor = currentVersion.Major < 0 ? 0 : currentVersion.Major;
+            int cMinor = currentVersion.Minor < 0 ? 0 : currentVersion.Minor;
+            int cBuild = currentVersion.Build < 0 ? 0 : currentVersion.Build;
+
+            if (rMajor != cMajor) return rMajor > cMajor;
+            if (rMinor != cMinor) return rMinor > cMinor;
+            return rBuild > cBuild;
         }
     }
 }

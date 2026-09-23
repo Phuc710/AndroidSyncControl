@@ -186,13 +186,13 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <!-- Device Model Name -->
-                    <TextBlock x:Name="txtDeviceName" Text="No Device Connected" FontSize="12.5" FontWeight="SemiBold" 
+                    <TextBlock x:Name="txtDeviceName" Text="{DynamicResource Str.Connect.NoDevice}" FontSize="12.5" FontWeight="SemiBold" 
                                Foreground="#1E293B" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                     
                     <!-- Connection Status Dot & Text -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                         <Ellipse x:Name="dotConnection" Width="7" Height="7" Fill="#10B981" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                        <TextBlock x:Name="txtConnectionState" Text="Connected" FontSize="11" FontWeight="Medium" 
+                        <TextBlock x:Name="txtConnectionState" Text="{DynamicResource Str.Connect.Disconnected}" FontSize="11" FontWeight="Medium" 
                                    Foreground="#64748B" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Grid>
@@ -203,72 +203,62 @@
                 <StackPanel Orientation="Vertical" Margin="4,4">
 
                     <!-- SECTION: DEVICE -->
-                    <TextBlock Text="DEVICE" Style="{StaticResource SectionLabel}"/>
+                    <TextBlock Text="{DynamicResource Str.Sec.Device}" Style="{StaticResource SectionLabel}"/>
                     
                     <Button x:Name="btn_info" Style="{StaticResource SidebarBtn}" Click="btn_info_Click">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#64748B"/>
-                            <TextBlock Text="Phone Info" VerticalAlignment="Center" Foreground="#334155"/>
+                            <TextBlock Text="{DynamicResource Str.Action.Info}" VerticalAlignment="Center" Foreground="#334155"/>
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="btn_fit_screen" Style="{StaticResource SidebarBtn}" Click="btn_fit_screen_Click" ToolTip="Tự động căn chỉnh kích thước cửa sổ vừa khít màn hình điện thoại (Ctrl+F)">
+                    <Button x:Name="btn_fit_screen" Style="{StaticResource SidebarBtn}" Click="btn_fit_screen_Click" ToolTip="Ctrl+F">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE740;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#64748B"/>
-                            <TextBlock Text="Fit Screen" VerticalAlignment="Center" Foreground="#334155"/>
+                            <TextBlock Text="{DynamicResource Str.Action.FitScreen}" VerticalAlignment="Center" Foreground="#334155"/>
                         </StackPanel>
                     </Button>
 
                     <Button x:Name="btn_power" Style="{StaticResource SidebarBtn}" Click="btn_power_Click">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE7E8;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#64748B"/>
-                            <TextBlock Text="Power" VerticalAlignment="Center" Foreground="#334155"/>
+                            <TextBlock Text="{DynamicResource Str.Action.Power}" VerticalAlignment="Center" Foreground="#334155"/>
                         </StackPanel>
                     </Button>
 
                     <Button x:Name="btn_reboot" Style="{StaticResource SidebarBtn}" Click="btn_reboot_Click">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#64748B"/>
-                            <TextBlock Text="Reboot" VerticalAlignment="Center" Foreground="#334155"/>
+                            <TextBlock Text="{DynamicResource Str.Action.Reboot}" VerticalAlignment="Center" Foreground="#334155"/>
                         </StackPanel>
                     </Button>
 
                     <Button x:Name="btn_screenshot" Style="{StaticResource SidebarBtn}" Click="btn_screenshot_Click">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE722;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#64748B"/>
-                            <TextBlock Text="Screenshot" VerticalAlignment="Center" Foreground="#334155"/>
+                            <TextBlock Text="{DynamicResource Str.Action.Screenshot}" VerticalAlignment="Center" Foreground="#334155"/>
                         </StackPanel>
                     </Button>
 
                     <Border Style="{StaticResource SectionDivider}"/>
 
                     <!-- SECTION: CLIPBOARD -->
-                    <TextBlock Text="CLIPBOARD" Style="{StaticResource SectionLabel}"/>
-
-                    <Button x:Name="btn_paste_direct" Style="{StaticResource SidebarBtn}" Click="btn_paste_direct_Click"
-                            ToolTip="Dán nội dung sang điện thoại ngay lập tức">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE77F;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#64748B"/>
-                            <TextBlock Text="Paste" VerticalAlignment="Center" FontWeight="Medium" Foreground="#334155"/>
-                        </StackPanel>
-                    </Button>
+                    <TextBlock Text="{DynamicResource Str.Sec.Clipboard}" Style="{StaticResource SectionLabel}"/>
 
                     <!-- Input textbox + send button -->
-                    <Grid Margin="6,2,6,4">
+                    <Grid Margin="6,3,6,4">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBox x:Name="txt_input" Height="26" Padding="6,2" FontSize="12" 
+                        <TextBox x:Name="txt_input" Height="30" Padding="8,4" FontSize="12" 
                                  Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="1"
                                  VerticalContentAlignment="Center"
-                                 KeyDown="txt_input_KeyDown"
-                                 GotFocus="txt_input_GotFocus"
-                                 ToolTip="Nhập text và nhấn Enter hoặc bấm icon bên cạnh"/>
+                                 KeyDown="txt_input_KeyDown"/>
                         <Button Grid.Column="1" x:Name="btn_send_text" Style="{StaticResource ActionGreenBtn}"
-                                Width="26" Height="26" Margin="3,0,0,0"
-                                Click="btn_send_text_Click" ToolTip="Dán vào điện thoại (Send)">
-                            <TextBlock Text="&#xE77F;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="White"
+                                Width="30" Height="30" Margin="4,0,0,0"
+                                Click="btn_send_text_Click">
+                            <TextBlock Text="&#xE724;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="White"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Button>
                     </Grid>
@@ -276,68 +266,76 @@
                     <Border Style="{StaticResource SectionDivider}"/>
 
                     <!-- SECTION: FILES -->
-                    <TextBlock Text="FILES" Style="{StaticResource SectionLabel}"/>
+                    <TextBlock Text="{DynamicResource Str.Sec.Files}" Style="{StaticResource SectionLabel}"/>
 
                     <Button x:Name="btn_install_apk" Style="{StaticResource SidebarBtn}" Click="btn_install_apk_Click">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE896;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#64748B"/>
-                            <TextBlock Text="Install APK" VerticalAlignment="Center" Foreground="#334155"/>
+                            <TextBlock Text="{DynamicResource Str.Action.InstallApk}" VerticalAlignment="Center" Foreground="#334155"/>
                         </StackPanel>
                     </Button>
 
                     <Button x:Name="btn_backup_restore" Style="{StaticResource SidebarBtn}" Click="btn_backup_restore_Click">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE775;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#10B981"/>
-                            <TextBlock Text="Backup / Restore" VerticalAlignment="Center" Foreground="#10B981" FontWeight="Medium"/>
+                            <TextBlock Text="{DynamicResource Str.Action.BackupRestore}" VerticalAlignment="Center" Foreground="#10B981" FontWeight="Medium"/>
                         </StackPanel>
                     </Button>
 
                     <Border Style="{StaticResource SectionDivider}"/>
 
                     <!-- SECTION: NETWORK -->
-                    <TextBlock Text="NETWORK" Style="{StaticResource SectionLabel}"/>
+                    <TextBlock Text="{DynamicResource Str.Sec.Network}" Style="{StaticResource SectionLabel}"/>
 
                     <Button x:Name="btn_proxy" Style="{StaticResource SidebarBtn}" Click="btn_proxy_Click">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE774;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#2563EB"/>
-                            <TextBlock Text="Fake Proxy" VerticalAlignment="Center" Foreground="#2563EB" FontWeight="Medium"/>
+                            <TextBlock Text="{DynamicResource Str.Action.Proxy}" VerticalAlignment="Center" Foreground="#2563EB" FontWeight="Medium"/>
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="btn_adb_cmd" Style="{StaticResource SidebarBtn}" Click="btn_adb_cmd_Click"
-                            ToolTip="Mở ADB Shell terminal">
+                    <Button x:Name="btn_adb_cmd" Style="{StaticResource SidebarBtn}" Click="btn_adb_cmd_Click">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text=">_" FontFamily="Consolas" FontWeight="Bold" FontSize="12" Width="22" VerticalAlignment="Center" Foreground="#2563EB"/>
-                            <TextBlock Text="ADB Shell" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#1E293B"/>
+                            <TextBlock Text="{DynamicResource Str.Action.AdbShell}" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#1E293B"/>
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="btn_rotate_ip" Style="{StaticResource SidebarBtn}" Click="btn_rotate_ip_Click"
-                            ToolTip="Bật/Tắt Airplane Mode để đổi dải IP 4G">
+                    <Button x:Name="btn_rotate_ip" Style="{StaticResource SidebarBtn}" Click="btn_rotate_ip_Click">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE709;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#2563EB"/>
-                            <TextBlock Text="Đổi IP (4G)" VerticalAlignment="Center" Foreground="#2563EB" FontWeight="Medium"/>
+                            <TextBlock Text="{DynamicResource Str.Action.RotateIp}" VerticalAlignment="Center" Foreground="#2563EB" FontWeight="Medium"/>
                         </StackPanel>
                     </Button>
 
                     <Border Style="{StaticResource SectionDivider}"/>
 
                     <!-- SECTION: SHOPEE -->
-                    <TextBlock Text="SHOPEE" Style="{StaticResource SectionLabel}"/>
+                    <TextBlock Text="{DynamicResource Str.Sec.Shopee}" Style="{StaticResource SectionLabel}"/>
 
-                    <Button x:Name="btn_open_shopee" Style="{StaticResource SidebarBtn}" Click="btn_open_shopee_Click"
-                            ToolTip="Mở ứng dụng Shopee trên điện thoại">
+                    <Button x:Name="btn_open_shopee" Style="{StaticResource SidebarBtn}" Click="btn_open_shopee_Click">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE7BF;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#EE4D2D"/>
-                            <TextBlock Text="Open Shopee" VerticalAlignment="Center" Foreground="#EE4D2D" FontWeight="SemiBold"/>
+                            <TextBlock Text="{DynamicResource Str.Action.OpenShopee}" VerticalAlignment="Center" Foreground="#EE4D2D" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="btn_bypass" Style="{StaticResource SidebarBtn}" Click="btn_bypass_Click"
-                            ToolTip="Bypass Shopee sạch: Xóa token, đổi SSAID, reset GAID, xoay IP 4G">
+                    <Button x:Name="btn_bypass" Style="{StaticResource SidebarBtn}" Click="btn_bypass_Click">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="⚡" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#EE4D2D"/>
-                            <TextBlock Text="Bypass Shopee" FontWeight="Bold" VerticalAlignment="Center" Foreground="#EE4D2D"/>
+                            <TextBlock Text="{DynamicResource Str.Action.BypassShopee}" FontWeight="Bold" VerticalAlignment="Center" Foreground="#EE4D2D"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Border Style="{StaticResource SectionDivider}"/>
+
+                    <!-- SECTION: SYSTEM -->
+                    <TextBlock Text="{DynamicResource Str.Sec.System}" Style="{StaticResource SectionLabel}"/>
+
+                    <Button x:Name="btn_check_update" Style="{StaticResource SidebarBtn}" Click="btn_check_update_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="22" VerticalAlignment="Center" Foreground="#2563EB"/>
+                            <TextBlock Text="{DynamicResource Str.Action.CheckUpdate}" VerticalAlignment="Center" Foreground="#334155"/>
                         </StackPanel>
                     </Button>
 
@@ -346,20 +344,20 @@
 
             <!-- Status Indicator Strip -->
             <Border Grid.Row="2" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="10,4">
-                <TextBlock x:Name="txt_status" Text="Ready" FontSize="11" Foreground="#10B981" FontWeight="SemiBold"
+                <TextBlock x:Name="txt_status" Text="{DynamicResource Str.Status.Ready}" FontSize="11" Foreground="#10B981" FontWeight="SemiBold"
                            TextTrimming="CharacterEllipsis"/>
             </Border>
 
             <!-- Bottom Android Navigation Bar: [ ≡ ] [ ⌂ ] [ ← ] -->
             <Border Grid.Row="3" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Background="#FAFAFA" Padding="4,2">
                 <UniformGrid Columns="3">
-                    <Button x:Name="btn_nav_menu" Style="{StaticResource NavBtn}" Click="btn_nav_menu_Click" ToolTip="Recent Apps (≡)">
+                    <Button x:Name="btn_nav_menu" Style="{StaticResource NavBtn}" Click="btn_nav_menu_Click" ToolTip="{DynamicResource Str.Nav.Recent}">
                         <TextBlock Text="&#xE700;" FontFamily="Segoe MDL2 Assets" FontSize="15" Foreground="#475569"/>
                     </Button>
-                    <Button x:Name="btn_nav_home" Style="{StaticResource NavBtn}" Click="btn_nav_home_Click" ToolTip="Home (⌂)">
+                    <Button x:Name="btn_nav_home" Style="{StaticResource NavBtn}" Click="btn_nav_home_Click" ToolTip="{DynamicResource Str.Nav.Home}">
                         <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="15" Foreground="#475569"/>
                     </Button>
-                    <Button x:Name="btn_nav_back" Style="{StaticResource NavBtn}" Click="btn_nav_back_Click" ToolTip="Back (←)">
+                    <Button x:Name="btn_nav_back" Style="{StaticResource NavBtn}" Click="btn_nav_back_Click" ToolTip="{DynamicResource Str.Nav.Back}">
                         <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="15" Foreground="#475569"/>
                     </Button>
                 </UniformGrid>

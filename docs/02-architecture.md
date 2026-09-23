@@ -12,23 +12,16 @@ Dự án được tổ chức theo tiêu chuẩn **1 Product Chính — Runtime 
 AndroidSyncControl (ROOT_Shopee)/
 │
 ├── src/
-│   └── AndroidSyncControl/             # Ứng dụng Desktop chính (WPF .NET 8)
-│       ├── UI/
-│       │   ├── Controls/               # UserControls (ShopeeSidebar, NumericUpDown)
-│       │   ├── Helpers/                # Core logic & Win32 Helpers
-│       │   │   ├── AndroidToolchain.cs # Resolver đường dẫn ADB & scrcpy duy nhất
-│       │   │   ├── DeviceConnectionSupervisor.cs # Quản lý vòng đời kết nối
-│       │   │   ├── ShopeeBypassService.cs        # Thực thi lệnh ADB bypass
-│       │   │   ├── ScrcpyProfile.cs              # Tối ưu hóa encoder video
-│       │   │   ├── ClipboardWatcher.cs           # Lắng nghe bộ nhớ tạm Windows
-│       │   │   └── WindowMaximizeHelper.cs       # Cân bằng margin khi phóng to
-│       │   ├── ViewModels/             # ViewModels hỗ trợ UI binding
-│       │   └── MainWindow.xaml/.cs     # Cửa sổ chính chứa container scrcpy
-│       ├── Localization/               # Bộ từ điển ngôn ngữ động (en / vi)
-│       ├── Themes/                     # Bộ màu Dark / Light / System
-│       ├── DataClass/                  # Dữ liệu cấu hình (SettingData.cs)
-│       ├── Resources/                  # Icon và tài nguyên nhúng
-│       └── AndroidSyncControl.csproj
+│   ├── AndroidSyncControl/             # Ứng dụng Desktop chính (WPF .NET 8)
+│   └── AndroidSyncControl.Updater/     # Tiến trình Updater độc lập (Out-of-process)
+│
+├── tests/
+│   ├── AndroidSyncControl.Tests/       # Unit & Integration Tests (AppPaths, Manifest, Isolation)
+│   ├── AndroidSyncControl.Agent.Tests/ # (Planned) Tests kiểm thử Agent Engine
+│   └── AndroidSyncControl.IntegrationTests/ # (Planned) Tests tích hợp Runtime
+│
+├── installer/
+│   └── setup.nsi                       # Kịch bản đóng gói NSIS Installer 1-click
 │
 ├── tools/
 │   └── android/                        # Thư mục chứa Binary / Dependency runtime
@@ -36,11 +29,19 @@ AndroidSyncControl (ROOT_Shopee)/
 │       └── scrcpy/                     # Bản thực thi scrcpy (scrcpy.exe + SDL2 + ffmpeg)
 │
 ├── scripts/
-│   ├── build/                          # build.ps1 (biên dịch Release)
+│   ├── build/                          # build.ps1, test.ps1, release.ps1 (Production Pipeline)
 │   ├── dev/                            # run.ps1 (chạy ứng dụng môi trường dev)
 │   └── setup/                          # setup.ps1 (kiểm tra môi trường thiết bị)
 │
 ├── docs/                               # Bộ tài liệu hướng dẫn kỹ thuật
+│   ├── 01-user-guide.md
+│   ├── 02-architecture.md
+│   ├── 03-bypass-mechanism.md
+│   ├── 04-troubleshooting.md
+│   ├── 05-agent-learning-system.md
+│   └── 06-packaging-and-update.md      # Đặc tả quy trình Release & Update
+│
+├── VERSION                             # File SemVer phiên bản (1.0.0)
 ├── config/                             # File cấu hình mẫu
 ├── setting.json                        # Cấu hình lưu trữ của người dùng
 ├── run.bat / sync_control.bat          # Script khởi chạy 1-click cho người dùng
@@ -148,3 +149,21 @@ Toàn bộ hệ thống tuân thủ nghiêm ngặt nguyên tắc **Zero Hardcodi
 3. **Cấu hình tối ưu độ tương thích mọi đời Android**:
    - Thêm cờ `--no-audio`: Loại bỏ nguy cơ crash demuxer âm thanh trên các phiên bản Android cũ (Android 5.0 - 9.0) mà vẫn giữ kết nối siêu nhẹ.
    - Giới hạn kích thước truyền tối đa 720p (`--max-size 720`) để đảm bảo tốc độ phản hồi 30 FPS mượt mà trên mọi phân khúc cấu hình.
+
+---
+
+## 6. Kiến Trúc Đóng Gói (Release) & Tự Động Cập Nhật (Update)
+
+Chi tiết toàn diện về luồng phát hành và cập nhật được quy định tại [`docs/06-packaging-and-update.md`](file:///c:/Users/Phucx/Desktop/ROOT_Shopee/docs/06-packaging-and-update.md), vận hành dựa trên các nguyên tắc cốt lõi:
+
+1. **Bảo Tồn Dữ Liệu 3 Tầng (3-Tier Isolation Invariant)**:
+   - `Program Files`: Binary tĩnh chỉ đọc (`.exe`, `.dll`, `Runtime/adb`, `Runtime/scrcpy`).
+   - `%LOCALAPPDATA%\AndroidSyncControl`: Trạng thái động người dùng (`config`, `logs`, `cache`, `updates`).
+   - `%LOCALAPPDATA%\AndroidSyncControl\agent-data`: Tri thức bất biến của Agent (`playbooks`, `experiences`, `lessons`, `evaluations`). **Tuyệt đối không bị xóa bởi Installer hoặc Updater.**
+2. **Pipeline Release 15 Bước Khép Kín (`release.ps1`)**:
+   - Kiểm tra Git -> Đọc SemVer -> Clean & Restore -> Build Release -> Run Tests -> Publish Self-Contained -> Stage Layout -> **Smoke Test Runtime (`--health-check`)** -> Nén ZIP & Tính SHA-256 -> Sinh `update-manifest.json` -> Ký số -> Biên dịch NSIS Installer -> Verify Artifacts.
+3. **Tiến Trình Cập Nhật Độc Lập (`AndroidSyncControl.Updater.exe`)**:
+   - Tránh xung đột khóa file DLL/EXE trên Windows.
+   - Tự động sao lưu phiên bản cũ (`.backup-<timestamp>`), giải nén bản mới, chạy `--health-check` xác thực; nếu có sự cố lập tức **tự động Rollback** về phiên bản an toàn trước đó.
+4. **Khởi Động Không Chặn (Non-Blocking Startup)**:
+   - UI WPF hiển thị ngay lập tức; việc kiểm tra cập nhật (`UpdateService`) chạy ngầm trong background sau khi app đã nạp xong.

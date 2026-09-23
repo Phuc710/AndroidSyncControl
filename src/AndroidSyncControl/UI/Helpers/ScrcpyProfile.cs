@@ -45,11 +45,11 @@ namespace AndroidSyncControl.UI.Helpers
             if (useSoftware)
             {
                 // Software fallback: Google H.264 software encoder (safe 720p, 4M, 30fps)
-                return $"-s {serial} --stay-awake --no-audio --max-size 720 --video-bit-rate=4M --max-fps=30 --video-codec=h264 --video-encoder=OMX.google.h264.encoder --window-title \"{screenTitle}\"";
+                return $"-s {serial} --stay-awake --no-audio --max-size 720 --video-bit-rate=4M --max-fps=30 --video-codec=h264 --video-encoder=OMX.google.h264.encoder --keyboard=sdk --shortcut-mod=lctrl,rctrl --window-title \"{screenTitle}\"";
             }
 
             // Hardware encoder: native high clarity up to 1280 max dimension, 8M bitrate, 60 fps
-            return $"-s {serial} --stay-awake --no-audio --max-size 1280 --video-bit-rate=8M --max-fps=60 --window-title \"{screenTitle}\"";
+            return $"-s {serial} --stay-awake --no-audio --max-size 1280 --video-bit-rate=8M --max-fps=60 --keyboard=sdk --shortcut-mod=lctrl,rctrl --window-title \"{screenTitle}\"";
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -20,5 +20,11 @@ namespace AndroidSyncControl.DataClass
 
         /// <summary>UI language: "English" or "Vietnamese". Empty = follow the Windows display language on first run.</summary>
         public string Language { get; set; } = "";
+
+        /// <summary>Automatically check for updates on startup.</summary>
+        public bool AutoCheckUpdate { get; set; } = true;
+
+        /// <summary>Manifest URL for checking updates. Defaults to GitHub releases raw manifest.</summary>
+        public string UpdateManifestUrl { get; set; } = "https://raw.githubusercontent.com/Phuc710/AndroidSyncControl/main/release/update-manifest.json";
     }
 }

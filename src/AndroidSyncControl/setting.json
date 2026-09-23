@@ -6,5 +6,7 @@
   "UseGpu": false,
   "IsAudio": false,
   "Theme": "Light",
-  "Language": "vi"
+  "Language": "vi",
+  "AutoCheckUpdate": true,
+  "UpdateManifestUrl": "https://raw.githubusercontent.com/Phuc710/AndroidSyncControl/main/release/update-manifest.json"
 }

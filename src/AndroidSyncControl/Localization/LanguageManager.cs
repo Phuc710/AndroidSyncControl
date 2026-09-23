@@ -40,10 +40,28 @@ namespace AndroidSyncControl.Localization
 
         /// <summary>
         /// Parses a persisted value; falls back to the Windows display language when
-        /// empty or unrecognized (first run).
+        /// empty or unrecognized (first run). Supports "vi", "en", or Enum names.
         /// </summary>
         public static LanguageMode Parse(string value)
-            => Enum.TryParse(value, ignoreCase: true, out LanguageMode mode) ? mode : DetectSystem();
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return DetectSystem();
+
+            if (string.Equals(value, "vi", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(value, "vn", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(value, "vietnamese", StringComparison.OrdinalIgnoreCase))
+            {
+                return LanguageMode.Vietnamese;
+            }
+
+            if (string.Equals(value, "en", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(value, "english", StringComparison.OrdinalIgnoreCase))
+            {
+                return LanguageMode.English;
+            }
+
+            return Enum.TryParse(value, ignoreCase: true, out LanguageMode mode) ? mode : DetectSystem();
+        }
 
         /// <summary>Vietnamese when the OS display language is Vietnamese, otherwise English.</summary>
         public static LanguageMode DetectSystem()
@@ -86,7 +104,10 @@ namespace AndroidSyncControl.Localization
             };
 
             var dicts = app.Resources.MergedDictionaries;
-            var existing = dicts.FirstOrDefault(d => d.Contains(StringMarkerKey));
+            var existing = dicts.FirstOrDefault(d =>
+                d.Contains(StringMarkerKey) ||
+                (d.Source != null && d.Source.OriginalString.Contains("Strings.")));
+
             if (existing != null)
                 dicts[dicts.IndexOf(existing)] = newDict;
             else
