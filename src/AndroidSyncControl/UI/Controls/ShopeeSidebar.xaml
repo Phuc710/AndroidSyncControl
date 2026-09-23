@@ -49,6 +49,7 @@
                                     <Condition Property="IsMouseOver" Value="True"/>
                                 </MultiTrigger.Conditions>
                                 <Setter TargetName="border" Property="Background" Value="#F1F5F9"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#E2E8F0"/>
                             </MultiTrigger>
                             <MultiTrigger>
                                 <MultiTrigger.Conditions>
@@ -56,6 +57,7 @@
                                     <Condition Property="IsPressed" Value="True"/>
                                 </MultiTrigger.Conditions>
                                 <Setter TargetName="border" Property="Background" Value="#E2E8F0"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#CBD5E1"/>
                             </MultiTrigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Cursor" Value="Arrow"/>
@@ -94,6 +96,7 @@
                                 </MultiTrigger.Conditions>
                                 <Setter TargetName="bdr" Property="Background" Value="#059669"/>
                                 <Setter TargetName="bdr" Property="BorderBrush" Value="#059669"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
                             </MultiTrigger>
                             <MultiTrigger>
                                 <MultiTrigger.Conditions>
@@ -102,12 +105,13 @@
                                 </MultiTrigger.Conditions>
                                 <Setter TargetName="bdr" Property="Background" Value="#047857"/>
                                 <Setter TargetName="bdr" Property="BorderBrush" Value="#047857"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
                             </MultiTrigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Cursor" Value="Arrow"/>
-                                <Setter TargetName="bdr" Property="Background" Value="#F3F4F6"/>
-                                <Setter TargetName="bdr" Property="BorderBrush" Value="#E5E7EB"/>
-                                <Setter Property="Foreground" Value="#9CA3AF"/>
+                                <Setter TargetName="bdr" Property="Background" Value="#E2E8F0"/>
+                                <Setter TargetName="bdr" Property="BorderBrush" Value="#CBD5E1"/>
+                                <Setter Property="Foreground" Value="#94A3B8"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -118,7 +122,9 @@
         <!-- Navigation bottom bar button -->
         <Style x:Key="NavBtn" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="#475569"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="Height" Value="36"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
@@ -126,7 +132,10 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="bdr" Background="{TemplateBinding Background}" CornerRadius="4">
+                        <Border x:Name="bdr" Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="5">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -136,6 +145,8 @@
                                     <Condition Property="IsMouseOver" Value="True"/>
                                 </MultiTrigger.Conditions>
                                 <Setter TargetName="bdr" Property="Background" Value="#F1F5F9"/>
+                                <Setter TargetName="bdr" Property="BorderBrush" Value="#E2E8F0"/>
+                                <Setter Property="Foreground" Value="#1E293B"/>
                             </MultiTrigger>
                             <MultiTrigger>
                                 <MultiTrigger.Conditions>
@@ -143,9 +154,12 @@
                                     <Condition Property="IsPressed" Value="True"/>
                                 </MultiTrigger.Conditions>
                                 <Setter TargetName="bdr" Property="Background" Value="#E2E8F0"/>
+                                <Setter TargetName="bdr" Property="BorderBrush" Value="#CBD5E1"/>
+                                <Setter Property="Foreground" Value="#0F172A"/>
                             </MultiTrigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Cursor" Value="Arrow"/>
+                                <Setter Property="Opacity" Value="0.4"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -258,7 +272,7 @@
                         <Button Grid.Column="1" x:Name="btn_send_text" Style="{StaticResource ActionGreenBtn}"
                                 Width="30" Height="30" Margin="4,0,0,0"
                                 Click="btn_send_text_Click">
-                            <TextBlock Text="&#xE724;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="White"
+                            <TextBlock Text="&#xE724;" FontFamily="Segoe MDL2 Assets" FontSize="12"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Button>
                     </Grid>

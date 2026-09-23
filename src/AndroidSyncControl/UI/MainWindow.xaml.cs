@@ -287,14 +287,7 @@ namespace AndroidSyncControl.UI
                 if (!string.IsNullOrEmpty(activeDevice))
                 {
                     shopeeSidebar.SetStatus(Localization.LanguageManager.GetString("Str.Status.Pasting"));
-                    if (_scrcpyHwnd != IntPtr.Zero)
-                    {
-                        TriggerScrcpyPaste();
-                    }
-                    else
-                    {
-                        await ShopeeBypassService.DirectClipboardPasteAsync(activeDevice, text);
-                    }
+                    await ShopeeBypassService.DirectClipboardPasteAsync(activeDevice, text, TriggerScrcpyPaste);
                     shopeeSidebar.SetStatus(Localization.LanguageManager.GetString("Str.Status.Done"));
                     FocusScrcpy();
                 }
@@ -516,10 +509,12 @@ namespace AndroidSyncControl.UI
                 try
                 {
                     FocusScrcpy();
-                    keybd_event(0x11, 0, 0, UIntPtr.Zero); // VK_CONTROL down
-                    keybd_event(0x56, 0, 0, UIntPtr.Zero); // VK_V down
-                    keybd_event(0x56, 0, KEYEVENTF_KEYUP, UIntPtr.Zero); // VK_V up
-                    keybd_event(0x11, 0, KEYEVENTF_KEYUP, UIntPtr.Zero); // VK_CONTROL up
+                    const int VK_CONTROL = 0x11;
+                    const int VK_V = 0x56;
+                    PostMessage(_scrcpyHwnd, WM_KEYDOWN, (IntPtr)VK_CONTROL, (IntPtr)1);
+                    PostMessage(_scrcpyHwnd, WM_KEYDOWN, (IntPtr)VK_V, (IntPtr)1);
+                    PostMessage(_scrcpyHwnd, WM_KEYUP, (IntPtr)VK_V, (IntPtr)(1 | (1 << 30) | (1 << 31)));
+                    PostMessage(_scrcpyHwnd, WM_KEYUP, (IntPtr)VK_CONTROL, (IntPtr)(1 | (1 << 30) | (1 << 31)));
                 }
                 catch (Exception ex)
                 {

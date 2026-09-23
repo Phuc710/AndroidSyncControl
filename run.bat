@@ -10,6 +10,11 @@ if not exist "%APP_DIR%\AndroidSyncControl.exe" set "APP_DIR=%~dp0src\AndroidSyn
 if not exist "%APP_DIR%\AndroidSyncControl.exe" set "APP_DIR=%~dp0dist\AndroidSyncControl-1.0.0-win-x64"
 
 if exist "%APP_DIR%\AndroidSyncControl.exe" (
+    if not exist "%APP_DIR%\AndroidSyncControl.Updater.exe" (
+        for /r "%~dp0src\AndroidSyncControl.Updater\bin" %%f in (AndroidSyncControl.Updater.exe) do (
+            if exist "%%f" copy /y "%%f" "%APP_DIR%\" >nul 2>&1
+        )
+    )
     start "" /D "%APP_DIR%" "%APP_DIR%\AndroidSyncControl.exe"
 ) else (
     dotnet run --project "%~dp0src\AndroidSyncControl\AndroidSyncControl.csproj"

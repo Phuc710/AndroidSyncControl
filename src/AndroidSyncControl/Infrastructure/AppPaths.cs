@@ -24,7 +24,35 @@ namespace AndroidSyncControl.Infrastructure
         // ── Program Files / Read-only Application Directory ─────────────────
         public static string RuntimeDir => Path.Combine(AppDir, "Runtime");
         public static string InstallMetadataFile => Path.Combine(AppDir, "install.json");
-        public static string UpdaterExePath => Path.Combine(AppDir, "AndroidSyncControl.Updater.exe");
+        public static string UpdaterExePath
+        {
+            get
+            {
+                string primary = Path.Combine(AppDir, "AndroidSyncControl.Updater.exe");
+                if (File.Exists(primary)) return primary;
+
+                // Look in sibling/dev directories
+                string[] candidates = new[]
+                {
+                    Path.Combine(AppDir, "..", "..", "..", "AndroidSyncControl.Updater", "bin", "Release", "net8.0-windows", "win-x64", "AndroidSyncControl.Updater.exe"),
+                    Path.Combine(AppDir, "..", "..", "..", "AndroidSyncControl.Updater", "bin", "Release", "net8.0-windows", "AndroidSyncControl.Updater.exe"),
+                    Path.Combine(AppDir, "..", "..", "..", "AndroidSyncControl.Updater", "bin", "x64", "Release", "net8.0-windows", "win-x64", "AndroidSyncControl.Updater.exe"),
+                    Path.Combine(AppDir, "..", "..", "..", "AndroidSyncControl.Updater", "bin", "x64", "Debug", "net8.0-windows", "win-x64", "AndroidSyncControl.Updater.exe"),
+                    Path.Combine(AppDir, "..", "..", "..", "AndroidSyncControl.Updater", "bin", "Debug", "net8.0-windows", "AndroidSyncControl.Updater.exe"),
+                    Path.Combine(AppDir, "..", "..", "dist", "AndroidSyncControl-1.0.1-win-x64", "AndroidSyncControl.Updater.exe")
+                };
+
+                foreach (var candidate in candidates)
+                {
+                    if (File.Exists(candidate))
+                    {
+                        return Path.GetFullPath(candidate);
+                    }
+                }
+
+                return primary;
+            }
+        }
 
         // ── User Mutable Data (%LOCALAPPDATA%\AndroidSyncControl\) ──────────
         public static string DataDir => _dataDir.Value;

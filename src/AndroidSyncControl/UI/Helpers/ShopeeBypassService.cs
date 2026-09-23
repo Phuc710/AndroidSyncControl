@@ -287,55 +287,88 @@ namespace AndroidSyncControl.UI.Helpers
         /// Transmits clipboard content directly to the Android input field in 1 atomic operation.
         /// Zero character-by-character typing simulation. Prioritizes instant paste across all apps.
         /// </summary>
-        public static async Task DirectClipboardPasteAsync(string deviceId, string text)
+        public static void SafeSetClipboard(string text)
         {
-            if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(deviceId)) return;
-
-            // 1. Ensure Windows Clipboard holds the exact text with retry
+            if (string.IsNullOrEmpty(text)) return;
             try
             {
-                void SafeSetClipboard(string val)
+                void DoSet()
                 {
-                    for (int i = 0; i < 3; i++)
+                    for (int i = 0; i < 5; i++)
                     {
                         try
                         {
-                            if (System.Windows.Clipboard.GetText() != val)
-                            {
-                                System.Windows.Clipboard.SetText(val);
-                            }
+                            System.Windows.Clipboard.SetDataObject(text, true);
                             break;
                         }
                         catch
                         {
-                            System.Threading.Thread.Sleep(20);
+                            System.Threading.Thread.Sleep(25);
                         }
                     }
                 }
 
                 if (System.Windows.Application.Current?.Dispatcher?.CheckAccess() == true)
                 {
-                    SafeSetClipboard(text);
+                    DoSet();
                 }
                 else
                 {
                     System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
                     {
-                        try { SafeSetClipboard(text); } catch { }
+                        try { DoSet(); } catch { }
                     });
                 }
             }
             catch { }
+        }
 
-            // 2. Direct Android Device Clipboard Channel (API 29+ Android 10+)
-            string clipCmd = $"shell cmd clipboard set-text '{EscapeShellSingleQuote(text)}' 2>/dev/null";
-            _ = RunAdbAsync(deviceId, clipCmd, 1200);
+        public static async Task DirectClipboardPasteAsync(string deviceId, string text, Action? triggerScrcpyPaste = null)
+        {
+            if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(deviceId)) return;
 
-            // 3. Short grace period for scrcpy socket sync
-            await Task.Delay(50);
+            // 1. Ensure Windows Clipboard holds the exact text with retry
+            SafeSetClipboard(text);
 
-            // 4. Trigger Instant Atomic Paste via KEYCODE_PASTE (279)
-            await RunAdbAsync(deviceId, "shell input keyevent 279", 3000);
+            // 2. Determine if text can be directly typed via 'input text'
+            // Single-line ASCII text <= 300 chars works universally on ALL Android versions (5.0 to 14+)
+            bool canUseInputText = !text.Contains('\r') && !text.Contains('\n') && text.Length <= 300;
+            if (canUseInputText)
+            {
+                foreach (char c in text)
+                {
+                    if (c < 32 || c > 126)
+                    {
+                        canUseInputText = false;
+                        break;
+                    }
+                }
+            }
+
+            if (canUseInputText)
+            {
+                // In Android 'input text', %s represents space, %% represents %
+                string inputFormatted = text.Replace("%", "%%").Replace(" ", "%s");
+                string cmd = $"shell input text '{EscapeShellSingleQuote(inputFormatted)}'";
+                await RunAdbAsync(deviceId, cmd, 3000);
+            }
+            else
+            {
+                // Direct Android Device Clipboard Channel (API 29+ Android 10+)
+                string clipCmd = $"shell cmd clipboard set-text '{EscapeShellSingleQuote(text)}' 2>/dev/null";
+                await RunAdbAsync(deviceId, clipCmd, 1200);
+
+                // If Scrcpy is attached, trigger scrcpy's native clipboard sync & paste
+                if (triggerScrcpyPaste != null)
+                {
+                    triggerScrcpyPaste();
+                }
+                else
+                {
+                    // Fallback to KEYCODE_PASTE (279)
+                    await RunAdbAsync(deviceId, "shell input keyevent 279", 3000);
+                }
+            }
         }
 
         // Aliases for compatibility

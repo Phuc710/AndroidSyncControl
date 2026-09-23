@@ -114,23 +114,10 @@ namespace AndroidSyncControl.UI.Controls
                     return;
                 }
 
-                // Ensure Windows Clipboard holds the exact text
-                try
-                {
-                    Clipboard.SetText(text);
-                }
-                catch { }
-
                 SetStatus(Localization.LanguageManager.GetString("Str.Status.Pasting"));
-                if (RequestPasteScrcpy != null)
-                {
-                    RequestPasteScrcpy.Invoke();
-                }
-                else
-                {
-                    await ShopeeBypassService.DirectClipboardPasteAsync(deviceId, text);
-                }
+                await ShopeeBypassService.DirectClipboardPasteAsync(deviceId, text, RequestPasteScrcpy);
                 SetStatus(Localization.LanguageManager.GetString("Str.Status.Done"));
+                RequestFocusScrcpy?.Invoke();
             }
             catch (Exception ex)
             {
