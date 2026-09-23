@@ -291,6 +291,8 @@ namespace AndroidSyncControl.UI
         {
             try
             {
+                FocusScrcpy();
+
                 string text = explicitText;
                 if (string.IsNullOrEmpty(text))
                 {

@@ -103,7 +103,12 @@ namespace AndroidSyncControl.UI.Controls
         {
             try
             {
-                string text = txt_input.Text;
+                // Bấm nút: Paste thẳng clipboard Windows vào máy (y hệt Ctrl+V).
+                // Nếu clipboard trống thì dùng text trong ô txt_input.
+                string clip = "";
+                try { if (Clipboard.ContainsText()) clip = Clipboard.GetText(); } catch { }
+                string text = !string.IsNullOrWhiteSpace(clip) ? clip : txt_input.Text;
+
                 RequestPasteToDevice?.Invoke(string.IsNullOrWhiteSpace(text) ? null : text);
             }
             catch (Exception ex)
@@ -117,7 +122,8 @@ namespace AndroidSyncControl.UI.Controls
             if (e.Key == Key.Enter)
             {
                 e.Handled = true;
-                btn_send_text_Click(sender, e);
+                string text = txt_input.Text;
+                RequestPasteToDevice?.Invoke(string.IsNullOrWhiteSpace(text) ? null : text);
             }
         }
 

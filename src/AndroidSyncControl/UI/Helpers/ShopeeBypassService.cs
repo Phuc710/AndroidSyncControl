@@ -330,42 +330,39 @@ namespace AndroidSyncControl.UI.Helpers
             // 1. Ensure Windows Clipboard holds the exact text with retry
             SafeSetClipboard(text);
 
-            // 2. Determine if text can be directly typed via 'input text'
-            // Single-line ASCII text <= 300 chars works universally on ALL Android versions (5.0 to 14+)
-            bool canUseInputText = !text.Contains('\r') && !text.Contains('\n') && text.Length <= 300;
-            if (canUseInputText)
-            {
-                foreach (char c in text)
-                {
-                    if (c < 32 || c > 126)
-                    {
-                        canUseInputText = false;
-                        break;
-                    }
-                }
-            }
+            // 2. Direct Android Device Clipboard Channel (API 29+ Android 10+)
+            _ = RunAdbAsync(deviceId, $"shell cmd clipboard set-text '{EscapeShellSingleQuote(text)}' 2>/dev/null", 1000);
 
-            if (canUseInputText)
+            // 3. Trigger native paste:
+            // If Scrcpy is attached, trigger scrcpy's native clipboard sync & paste (instant & universal)
+            if (triggerScrcpyPaste != null)
             {
-                // In Android 'input text', %s represents space, %% represents %
-                string inputFormatted = text.Replace("%", "%%").Replace(" ", "%s");
-                string cmd = $"shell input text '{EscapeShellSingleQuote(inputFormatted)}'";
-                await RunAdbAsync(deviceId, cmd, 3000);
+                triggerScrcpyPaste();
             }
             else
             {
-                // Direct Android Device Clipboard Channel (API 29+ Android 10+)
-                string clipCmd = $"shell cmd clipboard set-text '{EscapeShellSingleQuote(text)}' 2>/dev/null";
-                await RunAdbAsync(deviceId, clipCmd, 1200);
-
-                // If Scrcpy is attached, trigger scrcpy's native clipboard sync & paste
-                if (triggerScrcpyPaste != null)
+                // Fallback for headless ADB mode
+                bool canUseInputText = !text.Contains('\r') && !text.Contains('\n') && text.Length <= 300;
+                if (canUseInputText)
                 {
-                    triggerScrcpyPaste();
+                    foreach (char c in text)
+                    {
+                        if (c < 32 || c > 126)
+                        {
+                            canUseInputText = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (canUseInputText)
+                {
+                    string inputFormatted = text.Replace("%", "%%").Replace(" ", "%s");
+                    string cmd = $"shell input text '{EscapeShellSingleQuote(inputFormatted)}'";
+                    await RunAdbAsync(deviceId, cmd, 3000);
                 }
                 else
                 {
-                    // Fallback to KEYCODE_PASTE (279)
                     await RunAdbAsync(deviceId, "shell input keyevent 279", 3000);
                 }
             }
