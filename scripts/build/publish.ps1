@@ -76,7 +76,7 @@ if ($LASTEXITCODE -ne 0) {
 # 5. Git Commit & Push
 Write-Host "Pushing code to origin main..." -ForegroundColor Yellow
 git add .
-git commit -m "release: v$Version" -ErrorAction SilentlyContinue
+git commit -m "release: v$Version" 2>$null
 git push origin main
 
 # 6. Publish via gh release create

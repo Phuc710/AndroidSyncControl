@@ -56,6 +56,10 @@ Write-Host "[3/12] Cleaning previous build artifacts..." -ForegroundColor Yellow
 $distDir = Join-Path $rootDir "dist"
 $releaseDir = Join-Path $rootDir "release"
 
+# Stop any running instances to release file locks
+Get-Process -Name "AndroidSyncControl", "AndroidSyncControl.Updater" -ErrorAction SilentlyContinue | Stop-Process -Force
+Start-Sleep -Milliseconds 500
+
 if (Test-Path $distDir) { Remove-Item -Path $distDir -Recurse -Force }
 if (-not (Test-Path $releaseDir)) { New-Item -Path $releaseDir -ItemType Directory | Out-Null }
 
