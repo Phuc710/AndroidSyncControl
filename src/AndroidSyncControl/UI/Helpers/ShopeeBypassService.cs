@@ -323,6 +323,94 @@ namespace AndroidSyncControl.UI.Helpers
             catch { }
         }
 
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool OpenClipboard(IntPtr hWndNewOwner);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool CloseClipboard();
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr GetClipboardData(uint uFormat);
+
+        [DllImport("kernel32.dll")]
+        private static extern IntPtr GlobalLock(IntPtr hMem);
+
+        [DllImport("kernel32.dll")]
+        private static extern bool GlobalUnlock(IntPtr hMem);
+
+        private const uint CF_UNICODETEXT = 13;
+
+        public static string SafeGetClipboardText()
+        {
+            for (int i = 0; i < 6; i++)
+            {
+                try
+                {
+                    string result = string.Empty;
+                    void DoGet()
+                    {
+                        try
+                        {
+                            if (System.Windows.Clipboard.ContainsText())
+                            {
+                                result = System.Windows.Clipboard.GetText() ?? string.Empty;
+                            }
+                        }
+                        catch { }
+                    }
+
+                    if (System.Windows.Application.Current?.Dispatcher?.CheckAccess() == true)
+                    {
+                        DoGet();
+                    }
+                    else
+                    {
+                        System.Windows.Application.Current?.Dispatcher?.Invoke(DoGet);
+                    }
+
+                    if (!string.IsNullOrEmpty(result)) return result;
+                }
+                catch { }
+
+                System.Threading.Thread.Sleep(20);
+            }
+
+            for (int i = 0; i < 5; i++)
+            {
+                if (OpenClipboard(IntPtr.Zero))
+                {
+                    try
+                    {
+                        IntPtr handle = GetClipboardData(CF_UNICODETEXT);
+                        if (handle != IntPtr.Zero)
+                        {
+                            IntPtr pointer = GlobalLock(handle);
+                            if (pointer != IntPtr.Zero)
+                            {
+                                try
+                                {
+                                    string text = Marshal.PtrToStringUni(pointer) ?? string.Empty;
+                                    if (!string.IsNullOrEmpty(text)) return text;
+                                }
+                                finally
+                                {
+                                    GlobalUnlock(handle);
+                                }
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        CloseClipboard();
+                    }
+                    break;
+                }
+                System.Threading.Thread.Sleep(25);
+            }
+
+            return string.Empty;
+        }
+
         public static async Task DirectClipboardPasteAsync(string deviceId, string text, Action? triggerScrcpyPaste = null)
         {
             if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(deviceId)) return;

@@ -267,25 +267,7 @@ namespace AndroidSyncControl.UI
             }
         }
 
-        private string SafeGetClipboardText()
-        {
-            for (int i = 0; i < 5; i++)
-            {
-                try
-                {
-                    if (Clipboard.ContainsText())
-                    {
-                        return Clipboard.GetText() ?? string.Empty;
-                    }
-                    return string.Empty;
-                }
-                catch
-                {
-                    System.Threading.Thread.Sleep(30);
-                }
-            }
-            return string.Empty;
-        }
+        private string SafeGetClipboardText() => ShopeeBypassService.SafeGetClipboardText();
 
         public async void PasteClipboardToDevice(string? explicitText = null)
         {

@@ -103,15 +103,17 @@ namespace AndroidSyncControl.UI.Controls
         {
             try
             {
-                // Ưu tiên lấy đúng text đang có trong ô txt_input. Nếu rỗng mới lấy từ Windows clipboard.
-                string text = txt_input.Text?.Trim();
-                if (string.IsNullOrEmpty(text))
+                // Bấm nút: Lấy text từ clipboard Windows dán thẳng vào ô input
+                string clipText = ShopeeBypassService.SafeGetClipboardText()?.Trim();
+
+                string text = clipText;
+                if (!string.IsNullOrEmpty(text))
                 {
-                    try { if (Clipboard.ContainsText()) text = Clipboard.GetText()?.Trim(); } catch { }
-                    if (!string.IsNullOrEmpty(text))
-                    {
-                        txt_input.Text = text;
-                    }
+                    txt_input.Text = text;
+                }
+                else
+                {
+                    text = txt_input.Text?.Trim();
                 }
 
                 if (string.IsNullOrEmpty(text))
@@ -134,7 +136,11 @@ namespace AndroidSyncControl.UI.Controls
             if (e.Key == Key.Enter)
             {
                 e.Handled = true;
-                btn_send_text_Click(sender, e);
+                string text = txt_input.Text?.Trim();
+                if (!string.IsNullOrEmpty(text))
+                {
+                    RequestPasteToDevice?.Invoke(text);
+                }
             }
         }
 
