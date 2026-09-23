@@ -8,24 +8,6 @@
 [![scrcpy](https://img.shields.io/badge/scrcpy-3.1-orange.svg)](#)
 [![Build](https://img.shields.io/badge/Build-Passing%20(0%20Errors)-brightgreen.svg)](#)
 
----
-
-## 📑 Mục Lục
-1. [Tổng Quan Sản Phẩm](#-tổng-quan-sản-phẩm)
-2. [Bóc Tách Cốt Lõi Kỹ Thuật (Technical Core)](#-bóc-tách-cốt-lõi-kỹ-thuật-technical-core)
-   - [2.1 Kiến trúc 3 tầng (Layered Architecture)](#21-kiến-trúc-3-tầng-layered-architecture)
-   - [2.2 Cơ chế giải quyết Runtime tập trung (AndroidToolchain)](#22-cơ-chế-giải-quyết-runtime-tập-trung-androidtoolchain)
-   - [2.3 Kỹ thuật nhúng cửa sổ Win32 (Scrcpy Window Embedding)](#23-kỹ-thuật-nhúng-cửa-sổ-win32-scrcpy-window-embedding)
-   - [2.4 Máy trạng thái kết nối hướng sự kiện (Device Connection Supervisor)](#24-máy-trạng-thái-kết-nối-hướng-sự-kiện-device-connection-supervisor)
-   - [2.5 Chiến lược dự phòng Encoder thích ứng phần cứng tự động (ScrcpyProfile)](#25-chiến-lược-dự-phòng-encoder-thích-ứng-phần-cứng-tự-động-scrcpyprofile)
-   - [2.6 Quy trình kỹ thuật Bypass Risk Engine (M02 / D02 / L01)](#26-quy-trình-kỹ-thuật-bypass-risk-engine-m02--d02--l01)
-   - [2.7 Bơm văn bản tiếng Việt Unicode (Clipboard Injection Engine)](#27-bơm-văn-bản-tiếng-việt-unicode-clipboard-injection-engine)
-3. [Cấu Trúc Thư Mục Chuẩn Hóa](#-cấu-trúc-thư-mục-chuẩn-hóa)
-4. [Hướng Dẫn Vận Hành Nhanh (Quick Start)](#-hướng-dẫn-vận-hành-nhanh-quick-start)
-5. [Cấu Hình Ứng Dụng (`setting.json`)](#-cấu-hình-ứng-dụng-settingjson)
-6. [Hệ Thống Tài Liệu Chuyên Sâu (`docs/`)](#-hệ-thống-tài-liệu-chuyên-sâu-docs)
-
----
 
 ## 🎯 Tổng Quan Sản Phẩm
 
