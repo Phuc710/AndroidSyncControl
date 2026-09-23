@@ -136,6 +136,7 @@ namespace AndroidSyncControl.UI
             shopeeSidebar.RequestAutoFit = AutoFitWindowToDevice;
             shopeeSidebar.RequestFocusScrcpy = FocusScrcpy;
             shopeeSidebar.RequestPasteScrcpy = TriggerScrcpyPaste;
+            shopeeSidebar.RequestPasteToDevice = (txt) => PasteClipboardToDevice(txt);
 
             // Attach native click filter to capture clicks and route focus to scrcpy
             _panelFilter = new PanelClickFilter(scrcpyPanel.Handle, FocusScrcpy);
@@ -266,22 +267,45 @@ namespace AndroidSyncControl.UI
             }
         }
 
-        public async void PasteClipboardToDevice()
+        private string SafeGetClipboardText()
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                try
+                {
+                    if (Clipboard.ContainsText())
+                    {
+                        return Clipboard.GetText() ?? string.Empty;
+                    }
+                    return string.Empty;
+                }
+                catch
+                {
+                    System.Threading.Thread.Sleep(30);
+                }
+            }
+            return string.Empty;
+        }
+
+        public async void PasteClipboardToDevice(string? explicitText = null)
         {
             try
             {
-                if (!Clipboard.ContainsText())
+                string text = explicitText;
+                if (string.IsNullOrEmpty(text))
                 {
-                    shopeeSidebar.SetStatus(Localization.LanguageManager.GetString("Str.Status.EmptyClipboard"));
-                    return;
+                    text = SafeGetClipboardText();
                 }
 
-                string text = Clipboard.GetText();
                 if (string.IsNullOrEmpty(text))
                 {
                     shopeeSidebar.SetStatus(Localization.LanguageManager.GetString("Str.Status.EmptyClipboard"));
                     return;
                 }
+
+                // Ensure Windows Clipboard and sidebar textbox stay synchronized
+                ShopeeBypassService.SafeSetClipboard(text);
+                shopeeSidebar.SetInputText(text);
 
                 string activeDevice = DeviceConnectionSupervisor.Instance?.ActiveDeviceId;
                 if (!string.IsNullOrEmpty(activeDevice))

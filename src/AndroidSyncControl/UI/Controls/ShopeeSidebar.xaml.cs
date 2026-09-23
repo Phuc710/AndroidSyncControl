@@ -16,10 +16,19 @@ namespace AndroidSyncControl.UI.Controls
         public Action RequestAutoFit { get; set; }
         public Action RequestFocusScrcpy { get; set; }
         public Action RequestPasteScrcpy { get; set; }
+        public Action<string?> RequestPasteToDevice { get; set; }
 
         public ShopeeSidebar()
         {
             InitializeComponent();
+        }
+
+        public void SetInputText(string text)
+        {
+            Dispatcher.InvokeAsync(() =>
+            {
+                txt_input.Text = text ?? string.Empty;
+            });
         }
 
         private string ActiveDeviceId => GetCurrentDeviceId?.Invoke() ?? string.Empty;
@@ -90,34 +99,12 @@ namespace AndroidSyncControl.UI.Controls
             try { Process.Start(new ProcessStartInfo("explorer.exe", shotDir) { UseShellExecute = true }); } catch { }
         }
 
-        private async void btn_send_text_Click(object sender, RoutedEventArgs e)
+        private void btn_send_text_Click(object sender, RoutedEventArgs e)
         {
             try
             {
                 string text = txt_input.Text;
-                if (string.IsNullOrEmpty(text) && Clipboard.ContainsText())
-                {
-                    text = Clipboard.GetText() ?? string.Empty;
-                    txt_input.Text = text;
-                }
-
-                if (string.IsNullOrEmpty(text))
-                {
-                    SetStatus(Localization.LanguageManager.GetString("Str.Status.EmptyClipboard"));
-                    return;
-                }
-
-                string deviceId = ActiveDeviceId;
-                if (string.IsNullOrEmpty(deviceId))
-                {
-                    SetStatus(Localization.LanguageManager.GetString("Str.Status.NotConnected"));
-                    return;
-                }
-
-                SetStatus(Localization.LanguageManager.GetString("Str.Status.Pasting"));
-                await ShopeeBypassService.DirectClipboardPasteAsync(deviceId, text, RequestPasteScrcpy);
-                SetStatus(Localization.LanguageManager.GetString("Str.Status.Done"));
-                RequestFocusScrcpy?.Invoke();
+                RequestPasteToDevice?.Invoke(string.IsNullOrWhiteSpace(text) ? null : text);
             }
             catch (Exception ex)
             {
