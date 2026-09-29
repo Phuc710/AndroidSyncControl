@@ -3,127 +3,528 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:wf="clr-namespace:System.Windows.Forms;assembly=System.Windows.Forms"
-        xmlns:ctrl="clr-namespace:AndroidSyncControl.UI.Controls"
         mc:Ignorable="d"
-        Title="AndroidSyncControl" 
-        Icon="pack://application:,,,/Resources/appicon.ico"
-        Height="780" Width="615" MinWidth="380" MinHeight="500"
+        Title="AndroidSyncControl - Bảng Quản Trị Đa Thiết Bị" 
+        Icon="pack://application:,,,/AndroidSyncControl;component/Resources/appicon.ico"
+        Height="760" Width="1100" MinWidth="880" MinHeight="550"
         WindowStartupLocation="CenterScreen"
         FontFamily="Segoe UI" FontSize="13"
-        Background="#FFFFFF"
-        Foreground="#1E293B"
+        Background="#F8FAFC"
+        Foreground="#0F172A"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True"
-        TextOptions.TextFormattingMode="Display"
-        RenderOptions.BitmapScalingMode="NearestNeighbor"
-        StateChanged="Window_StateChanged">
+        TextOptions.TextFormattingMode="Display">
 
-    <!-- Clean Unified Workspace: Live Phone Screen (Left) + Attached Sidebar (Right) -->
-    <Grid x:Name="mainGrid" Background="#FFFFFF">
-        <Grid.ColumnDefinitions>
-            <!-- Phone column (fills available width, naturally 9:16 ratio) -->
-            <ColumnDefinition Width="*"/>
-            <!-- Dedicated Clean Sidebar -->
-            <ColumnDefinition Width="185"/>
-        </Grid.ColumnDefinitions>
+    <Window.Resources>
+        <!-- Standard Vector MDL2 Icon Style -->
+        <Style x:Key="VectorIcon" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+        </Style>
 
-        <!-- Left Area: Live Phone Screen Canvas (Embedded) OR Minimal White Connection Screen -->
-        <Grid Grid.Column="0" Background="#0F172A">
-            <!-- 1. Live Scrcpy Screen Canvas (Visible when connected) -->
-            <WindowsFormsHost x:Name="wfHost" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Visibility="Collapsed">
-                <wf:Panel x:Name="scrcpyPanel" BackColor="Black"/>
-            </WindowsFormsHost>
-
-            <!-- 2. Clean Minimal White Connection Screen -->
-            <Grid x:Name="overlayPanel" Visibility="Visible" Background="#FFFFFF">
-                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="320" Margin="24">
-                    
-                    <!-- Sleek Vector Smartphone Graphic (Pure XAML, High-DPI Sharp) -->
-                    <Grid Width="96" Height="136" Margin="0,0,0,24" HorizontalAlignment="Center">
-                        <!-- Soft subtle backdrop glow -->
-                        <Ellipse Width="96" Height="96" VerticalAlignment="Center" HorizontalAlignment="Center" Fill="#F8FAFC"/>
-
-                        <!-- Phone chassis -->
-                        <Border Width="68" Height="120" Background="#FFFFFF" BorderBrush="#CBD5E1" BorderThickness="1.5" CornerRadius="16" SnapsToDevicePixels="True">
-                            <Grid>
-                                <!-- Camera / Speaker notch -->
-                                <Border Width="22" Height="3.5" Background="#CBD5E1" CornerRadius="1.5" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,6,0,0"/>
-
-                                <!-- Center USB Connection Glyph -->
-                                <Border Width="36" Height="36" Background="#EFF6FF" BorderBrush="#DBEAFE" BorderThickness="1" CornerRadius="18"
-                                        HorizontalAlignment="Center" VerticalAlignment="Center">
-                                    <TextBlock Text="&#xE8B0;" FontFamily="Segoe MDL2 Assets" FontSize="16" Foreground="#2563EB" 
-                                               HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,1,0,0"/>
-                                </Border>
-
-                                <!-- Bottom Home indicator -->
-                                <Border Width="26" Height="3" Background="#E2E8F0" CornerRadius="1.5" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
-                            </Grid>
+        <!-- Clean Primary Button (Blue) -->
+        <Style x:Key="BtnPrimary" TargetType="Button">
+            <Setter Property="Background" Value="#2563EB"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="12,5"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#2563EB"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bdr" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                    </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bdr" Property="Background" Value="#1D4ED8"/>
+                                <Setter TargetName="bdr" Property="BorderBrush" Value="#1D4ED8"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bdr" Property="Background" Value="#1E40AF"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="bdr" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
-                    <!-- Title -->
-                    <TextBlock x:Name="txtStatusTitle" 
-                               Text="{DynamicResource Str.Connect.Title}" 
-                               FontSize="16" FontWeight="SemiBold" Foreground="#0F172A" 
-                               HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,6"/>
+        <!-- Orange Action Button (Shopee Bypass) -->
+        <Style x:Key="BtnOrange" TargetType="Button" BasedOn="{StaticResource BtnPrimary}">
+            <Setter Property="Background" Value="#EE4D2D"/>
+            <Setter Property="BorderBrush" Value="#EE4D2D"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bdr" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bdr" Property="Background" Value="#D73211"/>
+                                <Setter TargetName="bdr" Property="BorderBrush" Value="#D73211"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bdr" Property="Background" Value="#B8280B"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="bdr" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
-                    <!-- Description / Instructions -->
-                    <TextBlock x:Name="txtStatusDetail" 
-                               Text="{DynamicResource Str.Connect.Detail}" 
-                               FontSize="12.5" Foreground="#64748B" TextWrapping="Wrap" LineHeight="18"
-                               HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,18"/>
+        <!-- Teal Action Button (App Launch) -->
+        <Style x:Key="BtnTeal" TargetType="Button" BasedOn="{StaticResource BtnPrimary}">
+            <Setter Property="Background" Value="#0D9488"/>
+            <Setter Property="BorderBrush" Value="#0D9488"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bdr" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bdr" Property="Background" Value="#0F766E"/>
+                                <Setter TargetName="bdr" Property="BorderBrush" Value="#0F766E"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bdr" Property="Background" Value="#115E59"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="bdr" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
-                    <!-- Unified Minimal Status Pill -->
-                    <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="14" Padding="12,5" HorizontalAlignment="Center">
+        <!-- Outline Neutral Button -->
+        <Style x:Key="BtnOutline" TargetType="Button">
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="Foreground" Value="#334155"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="11,5"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bdr" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bdr" Property="Background" Value="#F1F5F9"/>
+                                <Setter TargetName="bdr" Property="BorderBrush" Value="#94A3B8"/>
+                                <Setter Property="Foreground" Value="#0F172A"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bdr" Property="Background" Value="#E2E8F0"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="bdr" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <!-- Master Layout: Top Header + Metric Cards + Toolbar + DataGrid (with Empty-State) + Footer -->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- 0. Header Bar -->
+            <RowDefinition Height="Auto"/> <!-- 1. Metric Stats Cards -->
+            <RowDefinition Height="Auto"/> <!-- 2. Batch Toolbar -->
+            <RowDefinition Height="*"/>    <!-- 3. Devices DataGrid / Empty State -->
+            <RowDefinition Height="Auto"/> <!-- 4. Footer Summary -->
+        </Grid.RowDefinitions>
+
+        <!-- 0. Header Bar -->
+        <Border Grid.Row="0" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="20,11">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Left: App Brand & Subtitle with Clean Vector Icon -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="36" Height="36" CornerRadius="8" Background="#EFF6FF" BorderBrush="#DBEAFE" BorderThickness="1" Margin="0,0,12,0">
+                        <TextBlock Text="&#xE8EA;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="#2563EB" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <!-- Hairline Circular Spinner Arc -->
-                            <Grid x:Name="progressBarStatus" Width="13" Height="13" Margin="0,0,7,0" VerticalAlignment="Center">
-                                <Grid.RenderTransform>
-                                    <RotateTransform x:Name="spinnerRotate" CenterX="6.5" CenterY="6.5" Angle="0"/>
-                                </Grid.RenderTransform>
-                                <Grid.Triggers>
-                                    <EventTrigger RoutedEvent="Loaded">
-                                        <BeginStoryboard>
-                                            <Storyboard RepeatBehavior="Forever">
-                                                <DoubleAnimation
-                                                    Storyboard.TargetName="spinnerRotate"
-                                                    Storyboard.TargetProperty="Angle"
-                                                    From="0" To="360"
-                                                    Duration="0:0:0.9"/>
-                                            </Storyboard>
-                                        </BeginStoryboard>
-                                    </EventTrigger>
-                                </Grid.Triggers>
-                                <Ellipse Width="13" Height="13" Stroke="#E2E8F0" StrokeThickness="2" Fill="Transparent"/>
-                                <Path x:Name="spinnerArc" Fill="Transparent" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round">
-                                    <Path.Stroke>
-                                        <SolidColorBrush x:Name="spinnerBrush" Color="#2563EB"/>
-                                    </Path.Stroke>
-                                    <Path.Data>
-                                        <PathGeometry>
-                                            <PathFigure StartPoint="6.5,1" IsClosed="False">
-                                                <ArcSegment Point="12,6.5" Size="5.5,5.5" SweepDirection="Clockwise" IsLargeArc="False"/>
-                                            </PathFigure>
-                                        </PathGeometry>
-                                    </Path.Data>
-                                </Path>
-                            </Grid>
+                            <TextBlock Text="AndroidSyncControl" FontSize="16" FontWeight="Bold" Foreground="#0F172A"/>
+                            <Border Background="#EFF6FF" BorderBrush="#DBEAFE" BorderThickness="1" CornerRadius="10" Padding="8,2" Margin="10,0,0,0">
+                                <TextBlock Text="Plus" FontSize="10" FontWeight="Bold" Foreground="#2563EB"/>
+                            </Border>
+                        </StackPanel>
+                        <TextBlock Text="Quản lý tập trung thiết bị Android" FontSize="11.5" Foreground="#64748B" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </StackPanel>
 
-                            <!-- Status Dot (visible when not spinning or on error/offline) -->
-                            <Ellipse x:Name="statusDot" Width="7" Height="7" Fill="#2563EB" VerticalAlignment="Center" Margin="0,0,7,0" Visibility="Collapsed"/>
-
-                            <!-- Text -->
-                            <TextBlock x:Name="txtStatusState" Text="{DynamicResource Str.Connect.Searching}" 
-                                       FontSize="12" FontWeight="Medium" Foreground="#475569" VerticalAlignment="Center"/>
+                <!-- Right: ADB Daemon Status & Quick Actions -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Background="#F1F5F9" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="16" Padding="12,5" Margin="0,0,10,0">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Ellipse x:Name="dotAdbStatus" Width="8" Height="8" Fill="#10B981" Margin="0,0,6,0"/>
+                            <TextBlock x:Name="txtAdbStatus" Text="ADB Daemon: Sẵn sàng (Port 5037)" FontSize="12" FontWeight="Medium" Foreground="#334155"/>
                         </StackPanel>
                     </Border>
+
+
+                    <Button x:Name="btnHeaderBypassAll" Style="{StaticResource BtnOrange}" Click="btnBatchBypass_Click" ToolTip="Chạy quy trình Bypass trên toàn bộ máy đã chọn">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE945;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center" Foreground="#FFFFFF"/>
+                            <TextBlock Text="Bypass Tất Cả"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </Grid>
-        </Grid>
+        </Border>
 
-        <!-- Clean Right Sidebar matching reference design -->
-        <ctrl:ShopeeSidebar x:Name="shopeeSidebar" Grid.Column="1"/>
+        <!-- 1. Metric Stats Ribbon -->
+        <Border Grid.Row="1" Background="#F8FAFC" Padding="20,12,20,6">
+            <UniformGrid Columns="4">
+                <!-- Card 1: Total Devices -->
+                <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16,10" Margin="0,0,8,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="TỔNG THIẾT BỊ" FontSize="10.5" FontWeight="Bold" Foreground="#64748B"/>
+                            <TextBlock x:Name="txtStatTotalDevices" Text="0" FontSize="22" FontWeight="Bold" Foreground="#0F172A" Margin="0,2,0,0"/>
+                        </StackPanel>
+                        <Border Grid.Column="1" Width="36" Height="36" CornerRadius="18" Background="#EFF6FF" VerticalAlignment="Center">
+                            <TextBlock Text="&#xE8EA;" FontFamily="Segoe MDL2 Assets" FontSize="16" Foreground="#2563EB" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <!-- Card 2: Ready Devices -->
+                <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16,10" Margin="4,0,4,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="SẴN SÀNG" FontSize="10.5" FontWeight="Bold" Foreground="#64748B"/>
+                            <TextBlock x:Name="txtStatReadyDevices" Text="0" FontSize="22" FontWeight="Bold" Foreground="#10B981" Margin="0,2,0,0"/>
+                        </StackPanel>
+                        <Border Grid.Column="1" Width="36" Height="36" CornerRadius="18" Background="#ECFDF5" VerticalAlignment="Center">
+                            <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="16" Foreground="#10B981" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <!-- Card 3: 4G Cellular Devices -->
+                <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16,10" Margin="4,0,4,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="MẠNG 4G DI ĐỘNG" FontSize="10.5" FontWeight="Bold" Foreground="#64748B"/>
+                            <TextBlock x:Name="txtStatMobileIpDevices" Text="0" FontSize="22" FontWeight="Bold" Foreground="#2563EB" Margin="0,2,0,0"/>
+                        </StackPanel>
+                        <Border Grid.Column="1" Width="36" Height="36" CornerRadius="18" Background="#EFF6FF" VerticalAlignment="Center">
+                            <TextBlock Text="&#xEC3B;" FontFamily="Segoe MDL2 Assets" FontSize="15" Foreground="#2563EB" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <!-- Card 4: Bypass Ready -->
+                <Border Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16,10" Margin="8,0,0,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="CƠ CHẾ BYPASS" FontSize="10.5" FontWeight="Bold" Foreground="#64748B"/>
+                            <TextBlock Text="Universal No-Root" FontSize="16" FontWeight="Bold" Foreground="#EE4D2D" Margin="0,4,0,0"/>
+                        </StackPanel>
+                        <Border Grid.Column="1" Width="36" Height="36" CornerRadius="18" Background="#FFF7ED" VerticalAlignment="Center">
+                            <TextBlock Text="&#xEA18;" FontFamily="Segoe MDL2 Assets" FontSize="16" Foreground="#EE4D2D" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </Grid>
+                </Border>
+            </UniformGrid>
+        </Border>
+
+        <!-- 2. Action & Filter Toolbar -->
+        <Border Grid.Row="2" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Margin="20,6,20,10" Padding="12,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Batch Action Buttons -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Checkbox with Count Badge -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
+                        <CheckBox x:Name="chkSelectAll" Content="Chọn tất cả" Checked="chkSelectAll_Checked" Unchecked="chkSelectAll_Unchecked" 
+                                  IsChecked="True" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#1E293B"/>
+                        <Border Background="#F1F5F9" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="7,2" Margin="8,0,0,0" VerticalAlignment="Center">
+                            <TextBlock x:Name="txtSelectedCountBadge" Text="0/0 máy" FontSize="11" FontWeight="Medium" Foreground="#64748B"/>
+                        </Border>
+                    </StackPanel>
+
+                    <Border Width="1" Background="#E2E8F0" Margin="0,3,12,3"/>
+
+                    <!-- 1. Hero Action: Bypass All Selected -->
+                    <Button x:Name="btnBatchBypass" Style="{StaticResource BtnOrange}" Click="btnBatchBypass_Click" Margin="0,0,6,0" Padding="12,0" Height="32">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE945;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0" Foreground="#FFFFFF" VerticalAlignment="Center"/>
+                            <TextBlock Text="Bypass Đã Chọn" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- 2. Rotate IP 4G -->
+                    <Button x:Name="btnBatchRotateIp" Style="{StaticResource BtnOutline}" Click="btnBatchRotateIp_Click" Margin="0,0,6,0" Padding="11,0" Height="32">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE709;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0" Foreground="#2563EB" VerticalAlignment="Center"/>
+                            <TextBlock Text="Xoay IP 4G" FontWeight="Medium"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- 3. Open Shopee -->
+                    <Button x:Name="btnBatchOpenShopee" Style="{StaticResource BtnOutline}" Click="btnBatchOpenShopee_Click" Margin="0,0,6,0" Padding="11,0" Height="32">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE7BF;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0" Foreground="#EE4D2D" VerticalAlignment="Center"/>
+                            <TextBlock Text="Mở Shopee" FontWeight="Medium"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- 4. Clear Cache -->
+                    <Button x:Name="btnBatchClearShopee" Style="{StaticResource BtnOutline}" Click="btnBatchClearShopee_Click" Margin="0,0,6,0" Padding="11,0" Height="32" ToolTip="Dọn sạch cache và dữ liệu app Shopee">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0" Foreground="#E11D48" VerticalAlignment="Center"/>
+                            <TextBlock Text="Xóa Cache" FontWeight="Medium"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- 5. Install APK -->
+                    <Button x:Name="btnBatchInstallApk" Style="{StaticResource BtnOutline}" Click="btnBatchInstallApk_Click" Padding="11,0" Height="32" ToolTip="Cài đặt tệp APK lên toàn bộ thiết bị đã chọn">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE896;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0" Foreground="#475569" VerticalAlignment="Center"/>
+                            <TextBlock Text="Cài APK" FontWeight="Medium"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <!-- Right: Search filter box with embedded icon -->
+                <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6" Height="32" Width="210" Padding="8,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="#94A3B8" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBox Grid.Column="1" x:Name="txtSearchFilter" TextChanged="txtSearchFilter_TextChanged" 
+                                 BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center" FontSize="12" Foreground="#0F172A"
+                                 ToolTip="Nhập tên máy, serial hoặc địa chỉ IP để lọc..."/>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- 3. Devices Container: DataGrid + Basic Empty State -->
+        <Border Grid.Row="3" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Margin="20,0,20,10">
+            <Grid>
+                <!-- 3A. Active Devices DataGrid Table -->
+                <DataGrid x:Name="dgDevices" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                          HeadersVisibility="Column" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9"
+                          Background="#FFFFFF" RowBackground="#FFFFFF" AlternatingRowBackground="#F8FAFC"
+                          BorderThickness="0" Foreground="#0F172A" FontSize="12.5" SelectionMode="Single"
+                          ColumnHeaderHeight="40" RowHeight="50">
+                    
+                    <DataGrid.ColumnHeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="#F8FAFC"/>
+                            <Setter Property="Foreground" Value="#475569"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                            <Setter Property="FontSize" Value="11.5"/>
+                            <Setter Property="Padding" Value="12,0"/>
+                            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                            <Setter Property="BorderBrush" Value="#E2E8F0"/>
+                        </Style>
+                    </DataGrid.ColumnHeaderStyle>
+
+                    <!-- Context Menu for Right Click Actions on DataGrid -->
+                    <DataGrid.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Mở Điều Khiển Màn Hình" Click="mnuRowOpenControl_Click" FontWeight="Bold"/>
+                            <MenuItem Header="Chạy Shopee Bypass" Click="mnuRowQuickBypass_Click"/>
+                            <MenuItem Header="Xoay IP 4G (Airplane Mode)" Click="mnuRowRotateIp_Click"/>
+                            <MenuItem Header="Mở Ứng Dụng Shopee" Click="mnuRowOpenShopee_Click"/>
+                            <MenuItem Header="Xóa Dữ Liệu / Cache Shopee" Click="mnuRowClearCache_Click"/>
+                            <Separator/>
+                            <MenuItem Header="Cài Đặt File APK..." Click="mnuRowInstallApk_Click"/>
+                            <MenuItem Header="Khởi Động Lại Điện Thoại" Click="mnuRowReboot_Click"/>
+                        </ContextMenu>
+                    </DataGrid.ContextMenu>
+
+                    <DataGrid.Columns>
+                        <!-- 1. Checkbox Column -->
+                        <DataGridTemplateColumn Width="45">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" 
+                                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- 2. Model Column with Phone Icon -->
+                        <DataGridTemplateColumn Header="Tên Thiết Bị / Model" Width="1.7*" MinWidth="150">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0">
+                                        <Border Width="28" Height="28" Background="#EFF6FF" CornerRadius="6" Margin="0,0,8,0">
+                                            <TextBlock Text="&#xE8EA;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="#2563EB" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Model}" FontWeight="SemiBold" FontSize="12.5" Foreground="#0F172A" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="Android System" FontSize="10.5" Foreground="#94A3B8"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- 3. Serial Column -->
+                        <DataGridTextColumn Header="Mã Serial ADB" Binding="{Binding Serial}" Width="1.3*" MinWidth="120" FontFamily="Consolas" FontSize="12" Foreground="#475569"/>
+
+                        <!-- 4. Network & IP Column -->
+                        <DataGridTemplateColumn Header="Kết Nối &amp; IP Mạng" Width="1.3*" MinWidth="120">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel VerticalAlignment="Center" Margin="8,0">
+                                        <TextBlock Text="{Binding NetworkType}" FontWeight="SemiBold" FontSize="11.5" Foreground="#2563EB"/>
+                                        <TextBlock Text="{Binding IpAddress}" FontFamily="Consolas" FontSize="11" Foreground="#64748B"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- 5. Status Column with Pill -->
+                        <DataGridTemplateColumn Header="Trạng Thái Hoạt Động" Width="1.6*" MinWidth="140">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0">
+                                        <Ellipse Width="7" Height="7" Fill="{Binding StatusColor}" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Status}" FontSize="12" FontWeight="Medium" Foreground="#1E293B" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- 6. Progress Column -->
+                        <DataGridTemplateColumn Header="Tiến Trình" Width="95">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <ProgressBar Value="{Binding Progress}" Maximum="100" Height="6" VerticalAlignment="Center" 
+                                                 Foreground="#10B981" Background="#E2E8F0" BorderThickness="0" Margin="6,0"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- 7. Action Column: Open Control Window + Quick Bypass -->
+                        <DataGridTemplateColumn Header="Thao Tác Điều Khiển" Width="200">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <!-- Primary: Open Control Window -->
+                                        <Button Click="btnRowOpenControl_Click" Tag="{Binding Serial}" Style="{StaticResource BtnPrimary}" 
+                                                Height="28" Padding="9,0" Margin="0,0,6,0" ToolTip="Mở cửa sổ điều khiển màn hình &amp; thanh công cụ">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#xE8EA;" FontFamily="Segoe MDL2 Assets" FontSize="11" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                                <TextBlock Text="Mở Màn Hình" FontSize="11" FontWeight="Bold"/>
+                                            </StackPanel>
+                                        </Button>
+
+                                        <!-- Secondary: Quick Bypass -->
+                                        <Button Click="btnRowQuickBypass_Click" Tag="{Binding Serial}" Style="{StaticResource BtnOutline}" 
+                                                Height="28" Padding="8,0" ToolTip="Chạy nhanh Shopee Bypass cho máy này">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#xE945;" FontFamily="Segoe MDL2 Assets" FontSize="10" Margin="0,0,4,0" Foreground="#EE4D2D" VerticalAlignment="Center"/>
+                                                <TextBlock Text="Bypass" FontSize="11" Foreground="#EE4D2D" FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <!-- 3B. Clean Basic Empty State (Completely static, no spinning radar/arcs) -->
+                <Grid x:Name="panelEmptyState" Background="#FFFFFF" Visibility="Collapsed">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="30">
+                        <!-- Static Subtle Device Icon -->
+                        <Border Width="48" Height="48" CornerRadius="24" Background="#F1F5F9" HorizontalAlignment="Center" Margin="0,0,0,12">
+                            <TextBlock Text="&#xE8EA;" FontFamily="Segoe MDL2 Assets" FontSize="20" Foreground="#94A3B8" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        
+                        <TextBlock Text="Chưa có thiết bị nào kết nối" FontSize="14" FontWeight="SemiBold" Foreground="#334155" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                        <TextBlock Text="Vui lòng cắm cáp USB và bật chế độ 'Gỡ lỗi USB' trên điện thoại" 
+                                   FontSize="12" Foreground="#94A3B8" HorizontalAlignment="Center" Margin="0,0,0,16"/>
+                        
+                        <Button Style="{StaticResource BtnOutline}" Click="btnRefresh_Click" Padding="14,0" Height="32" HorizontalAlignment="Center">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="11" Margin="0,0,6,0" VerticalAlignment="Center" Foreground="#2563EB"/>
+                                <TextBlock Text="Quét Lại Thiết Bị" FontSize="12" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- 4. Clean Footer Bar -->
+        <Border Grid.Row="4" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="20,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Ellipse Width="7" Height="7" Fill="#10B981" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="txtFooterSummary" Text="Sẵn sàng" FontSize="12" Foreground="#64748B" VerticalAlignment="Center"/>
+                </StackPanel>
+                <TextBlock x:Name="txtVersion" Grid.Column="1" Text="v1.0.0" FontSize="11.5" Foreground="#94A3B8" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
     </Grid>
 </Window>

@@ -1,871 +1,570 @@
 using System;
-using System.Diagnostics;
-using System.IO;
-using System.Runtime.InteropServices;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Media;
+using System.Windows.Controls;
+using System.Windows.Input;
+using Microsoft.Win32;
+using AndroidSyncControl.Services.Adb;
+using AndroidSyncControl.Services.Device;
 using AndroidSyncControl.UI.Helpers;
+using AndroidSyncControl.UI.ViewModels;
 
 namespace AndroidSyncControl.UI
 {
+    /// <summary>
+    /// Master Dashboard Window for Multi-Device Android Management and Automation.
+    /// Clean, light-themed admin control center with vector icons, animated radar scanning empty-state,
+    /// batch operations, and single-device screen mirroring window launcher.
+    /// </summary>
     public partial class MainWindow : Window
     {
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern IntPtr SetFocus(IntPtr hWnd);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-
-        [DllImport("kernel32.dll")]
-        private static extern uint GetCurrentThreadId();
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
-
-        [DllImport("user32.dll")]
-        private static extern bool SetForegroundWindow(IntPtr hWnd);
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        private static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        private static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
-
-        [DllImport("user32.dll")]
-        private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
-
-        private const uint SWP_NOSIZE = 0x0001;
-        private const uint SWP_NOMOVE = 0x0002;
-        private const uint SWP_NOZORDER = 0x0004;
-        private const uint SWP_FRAMECHANGED = 0x0020;
-        private const uint SWP_NOACTIVATE = 0x0010;
-
-        private const uint KEYEVENTF_KEYUP = 0x0002;
-        private const uint WM_ACTIVATE = 0x0006;
-        private const int WA_ACTIVE = 1;
-
-        private const int GWL_STYLE = -16;
-        private const int GWL_EXSTYLE = -20;
-        private const int WS_VISIBLE = 0x10000000;
-        private const int WS_CHILD = 0x40000000;
-        private const int SW_SHOW = 5;
-
-        private const uint WM_SETFOCUS = 0x0007;
-        private const uint WM_KEYDOWN = 0x0100;
-        private const uint WM_KEYUP = 0x0101;
-        private const uint WM_CHAR = 0x0102;
-
-        private IntPtr _scrcpyHwnd = IntPtr.Zero;
-        private IntPtr _mainHwnd = IntPtr.Zero;          // cached once in Loaded — avoids COM interop per FocusScrcpy call
-        private uint _attachedScrcpyThreadId = 0;
-        private PanelClickFilter? _panelFilter;
-        private System.Windows.Threading.DispatcherTimer? _resizeTimer; // debounce Win32 MoveWindow floods
-        private static readonly string _logPath =
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug_scrcpy.log");
-
-        private sealed class PanelClickFilter : System.Windows.Forms.NativeWindow
-        {
-            private readonly Action _onActivate;
-            private const int WM_MOUSEACTIVATE = 0x0021;
-            private const int WM_PARENTNOTIFY = 0x0210;
-            private const int WM_LBUTTONDOWN = 0x0201;
-            private const int WM_RBUTTONDOWN = 0x0204;
-            private const int WM_MBUTTONDOWN = 0x0207;
-
-            public PanelClickFilter(IntPtr handle, Action onActivate)
-            {
-                _onActivate = onActivate;
-                AssignHandle(handle);
-            }
-
-            protected override void WndProc(ref System.Windows.Forms.Message m)
-            {
-                if (m.Msg == WM_MOUSEACTIVATE)
-                {
-                    _onActivate?.Invoke();
-                }
-                else if (m.Msg == WM_PARENTNOTIFY)
-                {
-                    int eventId = m.WParam.ToInt32() & 0xFFFF;
-                    if (eventId == WM_LBUTTONDOWN || eventId == WM_RBUTTONDOWN || eventId == WM_MBUTTONDOWN)
-                    {
-                        _onActivate?.Invoke();
-                    }
-                }
-                base.WndProc(ref m);
-            }
-        }
+        private readonly ObservableCollection<DeviceItemViewModel> _deviceList = new();
+        private readonly List<DeviceItemViewModel> _allDevices = new();
+        private DeviceControlWindow? _controlWindow;
+        private bool _isRefreshing = false;
+        private bool _isBatchOperating = false;
 
         public MainWindow()
         {
             InitializeComponent();
+            dgDevices.ItemsSource = _deviceList;
+
             this.Loaded += MainWindow_Loaded;
             this.Closed += MainWindow_Closed;
+
+            // Double click row to open control window directly
+            dgDevices.MouseDoubleClick += (s, e) =>
+            {
+                if (dgDevices.SelectedItem is DeviceItemViewModel item && !string.IsNullOrEmpty(item.Serial))
+                {
+                    OpenControlForDevice(item.Serial);
+                }
+            };
         }
 
-        // Fire-and-forget: never block the UI thread on file I/O
-        private void Log(string msg) =>
-            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
-            {
-                try { File.AppendAllText(_logPath, $"[{DateTime.Now:HH:mm:ss.fff}] [MainWindow] {msg}\r\n"); }
-                catch { }
-            });
-
-        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            Log("MainWindow_Loaded fired");
-
-            // Cache the WPF window's HWND once — used by FocusScrcpy on every click.
-            // WindowInteropHelper.Handle is cheap after first call but allocation is not.
-            _mainHwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-
-            // Resize debounce: coalesce rapid WinForms resize events into a single
-            // MoveWindow call 50 ms after the last event fires.
-            _resizeTimer = new System.Windows.Threading.DispatcherTimer(
-                System.Windows.Threading.DispatcherPriority.Render)
-            {
-                Interval = TimeSpan.FromMilliseconds(50)
-            };
-            _resizeTimer.Tick += (_, __) => { _resizeTimer.Stop(); ResizeScrcpy(); };
-
-            this.Title = $"AndroidSyncControl {Controls.ShopeeSidebar.GetDisplayVersion()}";
-            this.Closing += (s, ev) => Log($"MainWindow_Closing fired, Cancel={ev.Cancel}");
-            scrcpyPanel.Resize += ScrcpyPanel_Resize;
-            scrcpyPanel.DoubleClick += (s, ev) => Dispatcher.Invoke(AutoFitWindowToDevice);
-
-            // MouseClick fires after full press+release — safe to focus SDL2 here.
-            // MouseDown intentionally omitted: focusing SDL2 while button is held makes
-            // SDL2 enter touch-drag mode immediately, causing screen to follow the mouse.
-            scrcpyPanel.MouseClick += (s, ev) => FocusScrcpy();
-
-            // Style panel with modern dark slate backdrop
-            scrcpyPanel.BackColor = System.Drawing.Color.FromArgb(15, 23, 42);
-
-            // Wire up sidebar fit action, scrcpy focus, and device query delegate
-            shopeeSidebar.GetCurrentDeviceId = () => DeviceConnectionSupervisor.Instance?.ActiveDeviceId ?? string.Empty;
-            shopeeSidebar.RequestAutoFit = AutoFitWindowToDevice;
-            shopeeSidebar.RequestFocusScrcpy = FocusScrcpy;
-            shopeeSidebar.RequestPasteScrcpy = TriggerScrcpyPaste;
-            shopeeSidebar.RequestPasteToDevice = (txt) => PasteClipboardToDevice(txt);
-
-            // Attach native click filter to capture clicks and route focus to scrcpy
-            _panelFilter = new PanelClickFilter(scrcpyPanel.Handle, FocusScrcpy);
-
-            // Global keyboard shortcuts and routing to scrcpy
-            this.PreviewKeyDown += MainWindow_PreviewKeyDown;
-            this.PreviewKeyUp += MainWindow_PreviewKeyUp;
-            this.PreviewTextInput += MainWindow_PreviewTextInput;
-
-            // Wire up supervisor callbacks
-            DeviceConnectionSupervisor.Instance.EmbedScrcpyAction = EmbedScrcpyWindow;
-            DeviceConnectionSupervisor.Instance.StateChanged += OnSupervisorStateChanged;
-            DeviceConnectionSupervisor.Instance.DeviceResolutionChanged += OnDeviceResolutionChanged;
-
-            Localization.LanguageManager.LanguageChanged += OnLanguageChanged;
-
-            // Start single supervisor
+            DeviceConnectionSupervisor.Instance.AttachedDevicesChanged += OnSupervisorAttachedDevicesChanged;
             DeviceConnectionSupervisor.Instance.Start();
+
+            await RefreshDeviceListAsync();
         }
 
         private void MainWindow_Closed(object? sender, EventArgs e)
         {
-            Log("MainWindow_Closed fired");
-            _panelFilter?.ReleaseHandle();
-            DetachScrcpyThread();
-            Localization.LanguageManager.LanguageChanged -= OnLanguageChanged;
-            DeviceConnectionSupervisor.Instance.StateChanged -= OnSupervisorStateChanged;
-            DeviceConnectionSupervisor.Instance.DeviceResolutionChanged -= OnDeviceResolutionChanged;
-            DeviceConnectionSupervisor.Instance.Stop();
-        }
+            DeviceConnectionSupervisor.Instance.AttachedDevicesChanged -= OnSupervisorAttachedDevicesChanged;
 
-        private void Window_StateChanged(object sender, EventArgs e)
-        {
-            Log($"Window_StateChanged: {this.WindowState}");
-            ResizeScrcpy();
-        }
-
-        private void ScrcpyPanel_Resize(object? sender, EventArgs e)
-        {
-            // Debounce: restart the 50 ms timer on every resize event.
-            // Prevents MoveWindow from being called dozens of times per second during drag-resize.
-            _resizeTimer?.Stop();
-            _resizeTimer?.Start();
-        }
-
-        private bool IsTextInputActive()
-        {
-            var focused = System.Windows.Input.Keyboard.FocusedElement;
-            return focused is System.Windows.Controls.TextBox || focused is System.Windows.Controls.PasswordBox;
-        }
-
-        private void MainWindow_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
-        {
-            bool isCtrl = (System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Control) == System.Windows.Input.ModifierKeys.Control;
-
-            // Shortcut: Ctrl + F or F11 for AutoFit
-            if ((e.Key == System.Windows.Input.Key.F && isCtrl) || e.Key == System.Windows.Input.Key.F11)
+            if (_controlWindow != null && _controlWindow.IsLoaded)
             {
-                AutoFitWindowToDevice();
-                e.Handled = true;
-                return;
-            }
-
-            // Global shortcuts when NOT typing inside a desktop input control (TextBox/PasswordBox)
-            if (!IsTextInputActive() && isCtrl)
-            {
-                // Ctrl + V: Direct paste into phone
-                if (e.Key == System.Windows.Input.Key.V)
-                {
-                    e.Handled = true;
-                    PasteClipboardToDevice();
-                    return;
-                }
-
-                // Ctrl + A: Select All on phone
-                if (e.Key == System.Windows.Input.Key.A)
-                {
-                    e.Handled = true;
-                    SelectAllOnDevice();
-                    return;
-                }
-
-                // Ctrl + C: Copy from phone to PC clipboard
-                if (e.Key == System.Windows.Input.Key.C)
-                {
-                    e.Handled = true;
-                    CopyFromDevice();
-                    return;
-                }
-
-                // Ctrl + X: Cut on phone
-                if (e.Key == System.Windows.Input.Key.X)
-                {
-                    e.Handled = true;
-                    CutOnDevice();
-                    return;
-                }
-
-                // Ctrl + Z: Undo on phone
-                if (e.Key == System.Windows.Input.Key.Z)
-                {
-                    e.Handled = true;
-                    TriggerScrcpyKeyCombo(0x5A); // VK_Z
-                    return;
-                }
-            }
-
-            if (IsTextInputActive()) return;
-
-            // Route non-text navigation and control keys directly to scrcpy
-            if (_scrcpyHwnd != IntPtr.Zero)
-            {
-                FocusScrcpy();
-
-                if (e.Key == System.Windows.Input.Key.Back ||
-                    e.Key == System.Windows.Input.Key.Enter ||
-                    e.Key == System.Windows.Input.Key.Tab ||
-                    e.Key == System.Windows.Input.Key.Escape ||
-                    e.Key == System.Windows.Input.Key.Delete ||
-                    e.Key == System.Windows.Input.Key.Left ||
-                    e.Key == System.Windows.Input.Key.Right ||
-                    e.Key == System.Windows.Input.Key.Up ||
-                    e.Key == System.Windows.Input.Key.Down ||
-                    e.Key == System.Windows.Input.Key.Home ||
-                    e.Key == System.Windows.Input.Key.End)
-                {
-                    int vk = System.Windows.Input.KeyInterop.VirtualKeyFromKey(e.Key);
-                    if (vk > 0)
-                    {
-                        PostMessage(_scrcpyHwnd, WM_KEYDOWN, (IntPtr)vk, (IntPtr)1);
-                        e.Handled = true;
-                    }
-                }
+                _controlWindow.Close();
+                _controlWindow = null;
             }
         }
 
-        private void MainWindow_PreviewKeyUp(object sender, System.Windows.Input.KeyEventArgs e)
+        private void OnSupervisorAttachedDevicesChanged(object? sender, EventArgs e)
         {
-            if (IsTextInputActive()) return;
-
-            if (_scrcpyHwnd != IntPtr.Zero)
+            Dispatcher.InvokeAsync(async () =>
             {
-                int vk = System.Windows.Input.KeyInterop.VirtualKeyFromKey(e.Key);
-                if (vk > 0)
-                {
-                    IntPtr lParam = (IntPtr)(1 | (1 << 30) | (1 << 31));
-                    PostMessage(_scrcpyHwnd, WM_KEYUP, (IntPtr)vk, lParam);
-                }
-            }
-        }
-
-        private void MainWindow_PreviewTextInput(object sender, System.Windows.Input.TextCompositionEventArgs e)
-        {
-            if (IsTextInputActive()) return;
-
-            if (_scrcpyHwnd != IntPtr.Zero && !string.IsNullOrEmpty(e.Text))
-            {
-                FocusScrcpy();
-                foreach (char c in e.Text)
-                {
-                    // Filter out non-printable ASCII control characters (< 32) generated by Ctrl-combinations
-                    if (c >= 32)
-                    {
-                        PostMessage(_scrcpyHwnd, WM_CHAR, (IntPtr)c, (IntPtr)1);
-                    }
-                }
-                e.Handled = true;
-            }
-        }
-
-        private string SafeGetClipboardText()
-        {
-            for (int i = 0; i < 5; i++)
-            {
-                try
-                {
-                    if (Clipboard.ContainsText())
-                    {
-                        return Clipboard.GetText() ?? string.Empty;
-                    }
-                    return string.Empty;
-                }
-                catch
-                {
-                    System.Threading.Thread.Sleep(30);
-                }
-            }
-            return string.Empty;
-        }
-
-        public async void PasteClipboardToDevice(string? explicitText = null)
-        {
-            try
-            {
-                // Determine text source
-                bool fromInputBox = !string.IsNullOrEmpty(explicitText);
-                string text = fromInputBox
-                    ? explicitText!
-                    : SafeGetClipboardText();
-
-                if (string.IsNullOrEmpty(text))
-                {
-                    shopeeSidebar.SetStatus(Localization.LanguageManager.GetString("Str.Status.EmptyClipboard"));
-                    return;
-                }
-
-                string activeDevice = DeviceConnectionSupervisor.Instance?.ActiveDeviceId;
-                if (string.IsNullOrEmpty(activeDevice))
-                {
-                    shopeeSidebar.SetStatus(Localization.LanguageManager.GetString("Str.Status.NotConnected"));
-                    return;
-                }
-
-                // If sourced from Windows clipboard (Ctrl+V), show the text in sidebar input
-                if (!fromInputBox)
-                    shopeeSidebar.SetInputText(text);
-
-                shopeeSidebar.SetStatus(Localization.LanguageManager.GetString("Str.Status.Pasting"));
-                FocusScrcpy();
-
-                await ShopeeBypassService.DirectClipboardPasteAsync(activeDevice, text);
-
-                shopeeSidebar.SetStatus(Localization.LanguageManager.GetString("Str.Status.Done"));
-                FocusScrcpy();
-            }
-            catch (Exception ex)
-            {
-                shopeeSidebar.SetStatus($"Error: {ex.Message}");
-                Log($"PasteClipboardToDevice error: {ex.Message}");
-            }
-        }
-
-        public void SelectAllOnDevice()
-        {
-            try
-            {
-                string activeDevice = DeviceConnectionSupervisor.Instance?.ActiveDeviceId;
-                if (string.IsNullOrEmpty(activeDevice))
-                {
-                    shopeeSidebar.SetStatus(Localization.LanguageManager.GetString("Str.Status.NotConnected"));
-                    return;
-                }
-
-                FocusScrcpy();
-                // 1. PostMessage Ctrl+A to scrcpy SDL2 window (VK_A = 0x41)
-                TriggerScrcpyKeyCombo(0x41);
-
-                // 2. Also send ADB input keyevent fallback for universal support across all devices
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        await ShopeeBypassService.RunAdbAsync(activeDevice, "shell input keyevent 29 --meta 4096", 1500);
-                    }
-                    catch { }
-                });
-
-                shopeeSidebar.SetStatus(Localization.LanguageManager.GetString("Str.Status.SelectAll"));
-            }
-            catch (Exception ex)
-            {
-                Log($"SelectAllOnDevice error: {ex.Message}");
-            }
-        }
-
-        public async void CopyFromDevice()
-        {
-            try
-            {
-                string activeDevice = DeviceConnectionSupervisor.Instance?.ActiveDeviceId;
-                if (string.IsNullOrEmpty(activeDevice))
-                {
-                    shopeeSidebar.SetStatus(Localization.LanguageManager.GetString("Str.Status.NotConnected"));
-                    return;
-                }
-
-                FocusScrcpy();
-                // 1. Send Ctrl+C to device so Android copies active selection to device clipboard
-                TriggerScrcpyKeyCombo(0x43); // VK_C
-
-                // 2. Also send ADB fallback: keyevent 31 with meta 4096
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        await ShopeeBypassService.RunAdbAsync(activeDevice, "shell input keyevent 31 --meta 4096", 1500);
-                    }
-                    catch { }
-                });
-
-                // 3. Send scrcpy shortcut MOD+c (Alt+C) to synchronize device clipboard to computer clipboard
-                await Task.Delay(50);
-                TriggerScrcpyAltKeyCombo(0x43);
-
-                // 4. Check Windows clipboard after sync and echo into sidebar
-                await Task.Delay(120);
-                string text = SafeGetClipboardText();
-                if (!string.IsNullOrEmpty(text))
-                {
-                    shopeeSidebar.SetInputText(text);
-                }
-                shopeeSidebar.SetStatus(Localization.LanguageManager.GetString("Str.Status.Copied"));
-            }
-            catch (Exception ex)
-            {
-                Log($"CopyFromDevice error: {ex.Message}");
-            }
-        }
-
-        public void CutOnDevice()
-        {
-            try
-            {
-                string activeDevice = DeviceConnectionSupervisor.Instance?.ActiveDeviceId;
-                if (string.IsNullOrEmpty(activeDevice)) return;
-
-                FocusScrcpy();
-                TriggerScrcpyKeyCombo(0x58); // VK_X
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        await ShopeeBypassService.RunAdbAsync(activeDevice, "shell input keyevent 52 --meta 4096", 1500);
-                        await Task.Delay(50);
-                        await Dispatcher.InvokeAsync(() => TriggerScrcpyAltKeyCombo(0x43));
-                        await Task.Delay(100);
-                        string text = SafeGetClipboardText();
-                        if (!string.IsNullOrEmpty(text))
-                            shopeeSidebar.SetInputText(text);
-                    }
-                    catch { }
-                });
-            }
-            catch (Exception ex)
-            {
-                Log($"CutOnDevice error: {ex.Message}");
-            }
-        }
-
-        private void OnDeviceResolutionChanged(object? sender, (int width, int height) res)
-        {
-            Dispatcher.InvokeAsync(() =>
-            {
-                Log($"DeviceResolutionChanged caught in MainWindow: {res.width}x{res.height}");
-                AutoFitWindowToDevice();
+                await RefreshDeviceListAsync();
             });
         }
 
-        public void AutoFitWindowToDevice()
+        /// <summary>
+        /// Scans all online ADB devices, queries model and network info, and populates the dashboard.
+        /// </summary>
+        public async Task RefreshDeviceListAsync()
         {
-            if (this.WindowState == WindowState.Minimized) return;
+            if (_isRefreshing) return;
+            _isRefreshing = true;
 
-            var workArea = SystemParameters.WorkArea;
-            double maxWindowHeight = workArea.Height * 0.92;
-            double maxWindowWidth = workArea.Width * 0.95;
-
-            // Target height bounded by desktop work area
-            double targetH = this.ActualHeight > 400 ? this.ActualHeight : 780;
-            if (targetH > maxWindowHeight) targetH = maxWindowHeight;
-            if (targetH < 620) targetH = 620;
-
-            // Calculate chrome margins (title bar + window borders)
-            double chromeH = 39;
-            double chromeW = 16;
-            if (this.ActualHeight > 0 && mainGrid.ActualHeight > 0)
+            try
             {
-                double diffH = this.ActualHeight - mainGrid.ActualHeight;
-                if (diffH > 10 && diffH < 80) chromeH = diffH;
+                txtFooterSummary.Text = "Đang quét thiết bị kết nối qua ADB...";
+                var serials = await ShopeeBypassService.GetAllConnectedDevicesAsync();
+
+                // Fetch details for all devices concurrently
+                var tasks = serials.Select(async s =>
+                {
+                    string model = await ShopeeBypassService.GetDeviceModelAsync(s);
+                    string mobileIp = await DeviceNetworkService.GetCurrentMobileIpAsync(s);
+                    bool hasMobile = !string.IsNullOrEmpty(mobileIp);
+                    string netType = hasMobile ? "4G Cellular" : "WiFi / LAN";
+                    string ipAddr = hasMobile ? mobileIp : "Local IP";
+
+                    var item = new DeviceItemViewModel
+                    {
+                        IsSelected = true,
+                        Serial = s,
+                        Model = model,
+                        NetworkType = netType,
+                        IpAddress = ipAddr,
+                        Status = "Sẵn sàng",
+                        StatusColor = "#10B981",
+                        Progress = 0
+                    };
+
+                    item.PropertyChanged += OnDeviceItemPropertyChanged;
+                    return item;
+                }).ToList();
+
+                var deviceItems = await Task.WhenAll(tasks);
+
+                _allDevices.Clear();
+                _allDevices.AddRange(deviceItems);
+
+                ApplySearchFilter();
+
+                // Update Stats Ribbon
+                int total = deviceItems.Length;
+                int mobileIpCount = deviceItems.Count(d => d.NetworkType.Contains("4G"));
+
+                txtStatTotalDevices.Text = total.ToString();
+                txtStatReadyDevices.Text = total.ToString();
+                txtStatMobileIpDevices.Text = mobileIpCount.ToString();
+
+                txtFooterSummary.Text = total > 0
+                    ? $"Đang kết nối {total} thiết bị ({mobileIpCount} máy 4G)"
+                    : "Sẵn sàng • Chưa có thiết bị kết nối";
             }
-            if (this.ActualWidth > 0 && mainGrid.ActualWidth > 0)
+            catch (Exception ex)
             {
-                double diffW = this.ActualWidth - mainGrid.ActualWidth;
-                if (diffW >= 0 && diffW < 40) chromeW = diffW;
+                txtFooterSummary.Text = $"Lỗi: {ex.Message}";
             }
-
-            double contentHeight = targetH - chromeH;
-            if (contentHeight < 400) contentHeight = 400;
-
-            double ratio = DeviceConnectionSupervisor.Instance.DeviceAspectRatio;
-            if (ratio <= 0.1 || ratio > 10.0) ratio = 9.0 / 16.0;
-
-            // Sidebar width is fixed at 185
-            double sidebarW = 185;
-            double idealPhoneW = contentHeight * ratio;
-
-            // If wide phone or landscape exceeds screen width, scale height down proportionally
-            if (idealPhoneW + sidebarW + chromeW > maxWindowWidth)
+            finally
             {
-                idealPhoneW = maxWindowWidth - sidebarW - chromeW;
-                contentHeight = idealPhoneW / ratio;
-                targetH = contentHeight + chromeH;
+                _isRefreshing = false;
             }
-
-            double targetW = Math.Round(idealPhoneW + sidebarW + chromeW);
-
-            if (this.WindowState == WindowState.Maximized)
-            {
-                this.WindowState = WindowState.Normal;
-            }
-
-            this.Width = targetW;
-            this.Height = Math.Round(targetH);
-
-            // Re-center window if pushed off desktop screen
-            if (this.Left + this.Width > workArea.Right)
-            {
-                this.Left = Math.Max(workArea.Left, workArea.Right - this.Width);
-            }
-            if (this.Top + this.Height > workArea.Bottom)
-            {
-                this.Top = Math.Max(workArea.Top, workArea.Bottom - this.Height);
-            }
-
-            Dispatcher.InvokeAsync(() =>
-            {
-                ResizeScrcpy();
-            }, System.Windows.Threading.DispatcherPriority.Loaded);
         }
 
-        private void ResizeScrcpy()
+        private void OnDeviceItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (_scrcpyHwnd == IntPtr.Zero || scrcpyPanel.Width <= 10 || scrcpyPanel.Height <= 10)
-                return;
-
-            int panelW = scrcpyPanel.Width;
-            int panelH = scrcpyPanel.Height;
-
-            double ratio = DeviceConnectionSupervisor.Instance.DeviceAspectRatio;
-            if (ratio <= 0.1 || ratio > 10.0) ratio = 9.0 / 16.0;
-
-            int targetW, targetH;
-            double panelRatio = (double)panelW / panelH;
-
-            if (panelRatio > ratio)
+            if (e.PropertyName == nameof(DeviceItemViewModel.IsSelected))
             {
-                // Panel is wider than phone aspect ratio -> fit to full height
-                targetH = panelH;
-                targetW = (int)Math.Round(panelH * ratio);
+                UpdateSelectedBadge();
+            }
+        }
+
+        private void UpdateSelectedBadge()
+        {
+            if (txtSelectedCountBadge == null || _deviceList == null) return;
+            int selected = _deviceList.Count(d => d.IsSelected);
+            int total = _deviceList.Count;
+            txtSelectedCountBadge.Text = $"{selected}/{total} máy";
+        }
+
+        private void ApplySearchFilter()
+        {
+            if (txtSearchFilter == null || panelEmptyState == null || dgDevices == null) return;
+            string query = txtSearchFilter.Text?.Trim().ToLowerInvariant() ?? string.Empty;
+
+            _deviceList.Clear();
+            foreach (var item in _allDevices)
+            {
+                if (string.IsNullOrEmpty(query) ||
+                    item.Model.ToLowerInvariant().Contains(query) ||
+                    item.Serial.ToLowerInvariant().Contains(query) ||
+                    item.IpAddress.ToLowerInvariant().Contains(query))
+                {
+                    _deviceList.Add(item);
+                }
+            }
+
+            // Toggle empty state vs active DataGrid
+            if (_deviceList.Count == 0)
+            {
+                panelEmptyState.Visibility = Visibility.Visible;
+                dgDevices.Visibility = Visibility.Collapsed;
             }
             else
             {
-                // Panel is taller than phone aspect ratio -> fit to full width
-                targetW = panelW;
-                targetH = (int)Math.Round(panelW / ratio);
+                panelEmptyState.Visibility = Visibility.Collapsed;
+                dgDevices.Visibility = Visibility.Visible;
             }
 
-            if (targetW < 10) targetW = 10;
-            if (targetH < 10) targetH = 10;
-
-            // Center scrcpy window perfectly inside panel
-            int targetX = (panelW - targetW) / 2;
-            int targetY = (panelH - targetH) / 2;
-
-            MoveWindow(_scrcpyHwnd, targetX, targetY, targetW, targetH, true);
+            UpdateSelectedBadge();
         }
 
-        private void AttachScrcpyThread(IntPtr hwnd)
+        /// <summary>
+        /// Opens or brings to focus the single-device control window (Ảnh 2).
+        /// </summary>
+        public void OpenControlForDevice(string serial)
         {
-            try
+            if (string.IsNullOrEmpty(serial)) return;
+
+            if (_controlWindow == null || !_controlWindow.IsLoaded)
             {
-                uint currentThreadId = GetCurrentThreadId();
-                uint scrcpyThreadId = GetWindowThreadProcessId(hwnd, out _);
-                if (scrcpyThreadId != 0 && scrcpyThreadId != currentThreadId)
-                {
-                    if (_attachedScrcpyThreadId != 0 && _attachedScrcpyThreadId != scrcpyThreadId)
-                    {
-                        AttachThreadInput(currentThreadId, _attachedScrcpyThreadId, false);
-                    }
-                    AttachThreadInput(currentThreadId, scrcpyThreadId, true);
-                    _attachedScrcpyThreadId = scrcpyThreadId;
-                }
+                _controlWindow = new DeviceControlWindow(serial);
+                _controlWindow.Closed += (s, e) => _controlWindow = null;
+                _controlWindow.Show();
             }
-            catch { }
-        }
-
-        private void DetachScrcpyThread()
-        {
-            try
+            else
             {
-                if (_attachedScrcpyThreadId != 0)
+                _controlWindow.SwitchDevice(serial);
+                if (_controlWindow.WindowState == WindowState.Minimized)
                 {
-                    AttachThreadInput(GetCurrentThreadId(), _attachedScrcpyThreadId, false);
-                    _attachedScrcpyThreadId = 0;
+                    _controlWindow.WindowState = WindowState.Normal;
                 }
+                _controlWindow.Activate();
             }
-            catch { }
         }
 
-        private bool EmbedScrcpyWindow(IntPtr hwnd)
+        // ── Single Device Operation Helpers ─────────────────────────────────
+
+        private async Task RunSingleDeviceBypassAsync(DeviceItemViewModel dev)
         {
-            if (hwnd == IntPtr.Zero) return false;
-            _scrcpyHwnd = hwnd;
+            dev.IsBusy = true;
+            dev.Status = "Bắt đầu bypass...";
+            dev.StatusColor = "#F59E0B";
+            dev.Progress = 15;
 
-            bool success = false;
-            Dispatcher.Invoke(() =>
+            bool success = await ShopeeBypassService.BypassShopeeAsync(dev.Serial, step =>
             {
-                try
+                Dispatcher.InvokeAsync(() =>
                 {
-                    wfHost.Visibility = Visibility.Visible;
-                    overlayPanel.Visibility = Visibility.Collapsed;
-
-                    SetParent(hwnd, scrcpyPanel.Handle);
-
-                    // Strip WS_POPUP, WS_CAPTION, WS_THICKFRAME, WS_MINIMIZEBOX, WS_MAXIMIZEBOX, WS_SYSMENU
-                    int style = GetWindowLong(hwnd, GWL_STYLE);
-                    style = (style & ~(unchecked((int)0x80000000) | 0x00C00000 | 0x00040000 | 0x00020000 | 0x00010000 | 0x00080000)) | WS_CHILD | WS_VISIBLE;
-                    SetWindowLong(hwnd, GWL_STYLE, style);
-
-                    // Strip WS_EX_DLGMODALFRAME, WS_EX_WINDOWEDGE, WS_EX_CLIENTEDGE, WS_EX_STATICEDGE
-                    int exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
-                    exStyle &= ~(0x00000001 | 0x00000100 | 0x00000200 | 0x00020000);
-                    SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
-
-                    // Recalculate non-client area so SDL2 has 0 margin/titlebar offset
-                    SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
-
-                    AttachScrcpyThread(hwnd);
-                    ShowWindow(hwnd, SW_SHOW);
-                    FocusScrcpy();
-
-                    // Perform resize immediately and also once layout completes
-                    ResizeScrcpy();
-                    Dispatcher.InvokeAsync(ResizeScrcpy, System.Windows.Threading.DispatcherPriority.Loaded);
-
-                    success = true;
-                }
-                catch
-                {
-                    success = false;
-                }
+                    dev.Status = step;
+                    if (dev.Progress < 85) dev.Progress += 15;
+                });
             });
 
-            return success;
+            dev.IsBusy = false;
+            dev.Progress = 100;
+            if (success)
+            {
+                dev.Status = "Bypass thành công";
+                dev.StatusColor = "#10B981";
+            }
+            else
+            {
+                dev.Status = "Bypass thất bại";
+                dev.StatusColor = "#EF4444";
+            }
         }
 
-        public void FocusScrcpy()
+        private async Task RotateSingleDeviceIpAsync(DeviceItemViewModel dev)
         {
-            if (_scrcpyHwnd == IntPtr.Zero) return;
+            dev.IsBusy = true;
+            dev.Status = "Đang gạt Airplane mode...";
+            dev.StatusColor = "#F59E0B";
+
+            await ShopeeBypassService.RotateAirplaneModeAsync(dev.Serial);
+
+            string newIp = await DeviceNetworkService.GetCurrentMobileIpAsync(dev.Serial);
+            dev.IsBusy = false;
+            if (!string.IsNullOrEmpty(newIp))
+            {
+                dev.IpAddress = newIp;
+                dev.NetworkType = "4G Cellular";
+                dev.Status = "Đổi IP thành công";
+                dev.StatusColor = "#10B981";
+            }
+            else
+            {
+                dev.Status = "Đã gạt Airplane";
+                dev.StatusColor = "#2563EB";
+            }
+        }
+
+        // ── Toolbar & Event Handlers ────────────────────────────────────────
+
+        private async void btnRefresh_Click(object sender, RoutedEventArgs e)
+        {
+            await RefreshDeviceListAsync();
+        }
+
+        private void txtSearchFilter_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (!IsLoaded) return;
+            ApplySearchFilter();
+        }
+
+        private void chkSelectAll_Checked(object sender, RoutedEventArgs e)
+        {
+            if (!IsLoaded || _deviceList == null) return;
+            foreach (var item in _deviceList)
+            {
+                item.IsSelected = true;
+            }
+            UpdateSelectedBadge();
+        }
+
+        private void chkSelectAll_Unchecked(object sender, RoutedEventArgs e)
+        {
+            if (!IsLoaded || _deviceList == null) return;
+            foreach (var item in _deviceList)
+            {
+                item.IsSelected = false;
+            }
+            UpdateSelectedBadge();
+        }
+
+        private void btnRowOpenControl_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement elem && elem.Tag is string serial && !string.IsNullOrEmpty(serial))
+            {
+                OpenControlForDevice(serial);
+            }
+        }
+
+        private async void btnRowQuickBypass_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement elem && elem.Tag is string serial && !string.IsNullOrEmpty(serial))
+            {
+                var dev = _deviceList.FirstOrDefault(d => d.Serial.Equals(serial, StringComparison.OrdinalIgnoreCase));
+                if (dev != null)
+                {
+                    await RunSingleDeviceBypassAsync(dev);
+                }
+            }
+        }
+
+        private async void btnBatchBypass_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isBatchOperating) return;
+
+            var selected = _deviceList.Where(d => d.IsSelected).ToList();
+            if (selected.Count == 0)
+            {
+                MessageBox.Show("Vui lòng tick chọn ít nhất 1 thiết bị trong danh sách.", "Thông Báo", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            _isBatchOperating = true;
+            btnBatchBypass.IsEnabled = false;
+            btnBatchRotateIp.IsEnabled = false;
+            btnBatchOpenShopee.IsEnabled = false;
+            btnBatchClearShopee.IsEnabled = false;
+            btnHeaderBypassAll.IsEnabled = false;
+
+            txtFooterSummary.Text = $"Đang thực hiện Bypass Shopee trên {selected.Count} thiết bị đồng thời...";
+
             try
             {
-                // scrcpy runs in a separate process; SetForegroundWindow is required
-                // before SetFocus can steal focus cross-process on modern Windows.
-                // Use cached _mainHwnd — avoids re-allocating WindowInteropHelper wrapper.
-                SetForegroundWindow(_mainHwnd);
-                SetFocus(_scrcpyHwnd);
-            }
-            catch { }
-        }
+                var tasks = selected.Select(async dev =>
+                {
+                    await RunSingleDeviceBypassAsync(dev);
+                }).ToList();
 
-        public void TriggerScrcpyKeyCombo(int vk)
-        {
-            if (_scrcpyHwnd != IntPtr.Zero)
+                await Task.WhenAll(tasks);
+                txtFooterSummary.Text = $"Hoàn tất Bypass cho {selected.Count} thiết bị.";
+            }
+            catch (Exception ex)
             {
-                try
-                {
-                    FocusScrcpy();
-                    const int VK_CONTROL = 0x11;
-                    PostMessage(_scrcpyHwnd, WM_KEYDOWN, (IntPtr)VK_CONTROL, (IntPtr)1);
-                    PostMessage(_scrcpyHwnd, WM_KEYDOWN, (IntPtr)vk, (IntPtr)1);
-                    PostMessage(_scrcpyHwnd, WM_KEYUP, (IntPtr)vk, (IntPtr)(1 | (1 << 30) | (1 << 31)));
-                    PostMessage(_scrcpyHwnd, WM_KEYUP, (IntPtr)VK_CONTROL, (IntPtr)(1 | (1 << 30) | (1 << 31)));
-                }
-                catch (Exception ex)
-                {
-                    Log($"TriggerScrcpyKeyCombo error: {ex.Message}");
-                }
+                txtFooterSummary.Text = $"Lỗi khi Bypass: {ex.Message}";
+            }
+            finally
+            {
+                _isBatchOperating = false;
+                btnBatchBypass.IsEnabled = true;
+                btnBatchRotateIp.IsEnabled = true;
+                btnBatchOpenShopee.IsEnabled = true;
+                btnBatchClearShopee.IsEnabled = true;
+                btnHeaderBypassAll.IsEnabled = true;
             }
         }
 
-        public void TriggerScrcpyAltKeyCombo(int vk)
+        private async void btnBatchRotateIp_Click(object sender, RoutedEventArgs e)
         {
-            if (_scrcpyHwnd != IntPtr.Zero)
+            if (_isBatchOperating) return;
+
+            var selected = _deviceList.Where(d => d.IsSelected).ToList();
+            if (selected.Count == 0)
             {
-                try
+                MessageBox.Show("Vui lòng tick chọn ít nhất 1 thiết bị.", "Thông Báo", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            _isBatchOperating = true;
+            btnBatchRotateIp.IsEnabled = false;
+            txtFooterSummary.Text = $"Đang xoay IP 4G trên {selected.Count} thiết bị...";
+
+            try
+            {
+                var tasks = selected.Select(async dev =>
                 {
-                    FocusScrcpy();
-                    const int VK_MENU = 0x12;
-                    PostMessage(_scrcpyHwnd, WM_KEYDOWN, (IntPtr)VK_MENU, (IntPtr)1);
-                    PostMessage(_scrcpyHwnd, WM_KEYDOWN, (IntPtr)vk, (IntPtr)1);
-                    PostMessage(_scrcpyHwnd, WM_KEYUP, (IntPtr)vk, (IntPtr)(1 | (1 << 30) | (1 << 31)));
-                    PostMessage(_scrcpyHwnd, WM_KEYUP, (IntPtr)VK_MENU, (IntPtr)(1 | (1 << 30) | (1 << 31)));
-                }
-                catch (Exception ex)
+                    await RotateSingleDeviceIpAsync(dev);
+                }).ToList();
+
+                await Task.WhenAll(tasks);
+                txtFooterSummary.Text = $"Đã hoàn tất xoay IP trên {selected.Count} thiết bị.";
+            }
+            catch (Exception ex)
+            {
+                txtFooterSummary.Text = $"Lỗi xoay IP: {ex.Message}";
+            }
+            finally
+            {
+                _isBatchOperating = false;
+                btnBatchRotateIp.IsEnabled = true;
+            }
+        }
+
+        private async void btnBatchOpenShopee_Click(object sender, RoutedEventArgs e)
+        {
+            var selected = _deviceList.Where(d => d.IsSelected).ToList();
+            if (selected.Count == 0)
+            {
+                MessageBox.Show("Vui lòng tick chọn ít nhất 1 thiết bị.", "Thông Báo", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            txtFooterSummary.Text = $"Đang mở Shopee trên {selected.Count} thiết bị...";
+            var tasks = selected.Select(async dev =>
+            {
+                await ShopeeBypassService.OpenShopeeAsync(dev.Serial);
+                dev.Status = "Đã mở Shopee";
+                dev.StatusColor = "#10B981";
+            }).ToList();
+
+            await Task.WhenAll(tasks);
+            txtFooterSummary.Text = $"Đã mở Shopee trên {selected.Count} thiết bị.";
+        }
+
+        private async void btnBatchClearShopee_Click(object sender, RoutedEventArgs e)
+        {
+            var selected = _deviceList.Where(d => d.IsSelected).ToList();
+            if (selected.Count == 0)
+            {
+                MessageBox.Show("Vui lòng tick chọn ít nhất 1 thiết bị.", "Thông Báo", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            txtFooterSummary.Text = $"Đang dọn sạch cache Shopee trên {selected.Count} thiết bị...";
+            var tasks = selected.Select(async dev =>
+            {
+                dev.Status = "Đang dọn cache...";
+                dev.StatusColor = "#F59E0B";
+                await AdbPackageService.ForceStopAsync(dev.Serial, "com.shopee.vn");
+                await AdbPackageService.ClearDataAsync(dev.Serial, "com.shopee.vn");
+                dev.Status = "Đã dọn sạch Shopee";
+                dev.StatusColor = "#10B981";
+            }).ToList();
+
+            await Task.WhenAll(tasks);
+            txtFooterSummary.Text = $"Đã dọn sạch cache Shopee trên {selected.Count} thiết bị.";
+        }
+
+        private async void btnBatchInstallApk_Click(object sender, RoutedEventArgs e)
+        {
+            var selected = _deviceList.Where(d => d.IsSelected).ToList();
+            if (selected.Count == 0)
+            {
+                MessageBox.Show("Vui lòng tick chọn ít nhất 1 thiết bị.", "Thông Báo", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var dlg = new OpenFileDialog
+            {
+                Filter = "Android Package (*.apk)|*.apk|All Files (*.*)|*.*",
+                Title = "Chọn tệp tin APK để cài đặt hàng loạt"
+            };
+
+            if (dlg.ShowDialog() == true)
+            {
+                string apkPath = dlg.FileName;
+                txtFooterSummary.Text = $"Đang cài đặt APK trên {selected.Count} thiết bị...";
+
+                var tasks = selected.Select(async dev =>
                 {
-                    Log($"TriggerScrcpyAltKeyCombo error: {ex.Message}");
+                    dev.Status = "Đang cài đặt APK...";
+                    dev.StatusColor = "#F59E0B";
+                    var (ok, _) = await ShopeeBypassService.InstallApkDetailedAsync(dev.Serial, apkPath);
+                    dev.Status = ok ? "Cài APK thành công" : "Cài APK thất bại";
+                    dev.StatusColor = ok ? "#10B981" : "#EF4444";
+                }).ToList();
+
+                await Task.WhenAll(tasks);
+                txtFooterSummary.Text = $"Hoàn tất cài đặt APK trên {selected.Count} thiết bị.";
+            }
+        }
+
+        // ── DataGrid Context Menu Handlers ──────────────────────────────────
+
+        private void mnuRowOpenControl_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgDevices.SelectedItem is DeviceItemViewModel item && !string.IsNullOrEmpty(item.Serial))
+            {
+                OpenControlForDevice(item.Serial);
+            }
+        }
+
+        private async void mnuRowQuickBypass_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgDevices.SelectedItem is DeviceItemViewModel item)
+            {
+                await RunSingleDeviceBypassAsync(item);
+            }
+        }
+
+        private async void mnuRowRotateIp_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgDevices.SelectedItem is DeviceItemViewModel item)
+            {
+                await RotateSingleDeviceIpAsync(item);
+            }
+        }
+
+        private async void mnuRowOpenShopee_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgDevices.SelectedItem is DeviceItemViewModel item)
+            {
+                await ShopeeBypassService.OpenShopeeAsync(item.Serial);
+                item.Status = "Đã mở Shopee";
+                item.StatusColor = "#10B981";
+            }
+        }
+
+        private async void mnuRowClearCache_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgDevices.SelectedItem is DeviceItemViewModel item)
+            {
+                item.Status = "Đang dọn cache...";
+                item.StatusColor = "#F59E0B";
+                await AdbPackageService.ForceStopAsync(item.Serial, "com.shopee.vn");
+                await AdbPackageService.ClearDataAsync(item.Serial, "com.shopee.vn");
+                item.Status = "Đã dọn sạch Shopee";
+                item.StatusColor = "#10B981";
+            }
+        }
+
+        private async void mnuRowInstallApk_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgDevices.SelectedItem is DeviceItemViewModel item)
+            {
+                var dlg = new OpenFileDialog
+                {
+                    Filter = "Android Package (*.apk)|*.apk|All Files (*.*)|*.*",
+                    Title = $"Cài đặt APK cho {item.Model}"
+                };
+
+                if (dlg.ShowDialog() == true)
+                {
+                    item.Status = "Đang cài APK...";
+                    item.StatusColor = "#F59E0B";
+                    var (ok, _) = await ShopeeBypassService.InstallApkDetailedAsync(item.Serial, dlg.FileName);
+                    item.Status = ok ? "Cài APK thành công" : "Cài APK thất bại";
+                    item.StatusColor = ok ? "#10B981" : "#EF4444";
                 }
             }
         }
 
-        public void TriggerScrcpyPaste()
+        private async void mnuRowReboot_Click(object sender, RoutedEventArgs e)
         {
-            TriggerScrcpyKeyCombo(0x56); // VK_V
-        }
-
-        private ConnectionStateChangedEventArgs? _lastConnectionState;
-
-        private void OnLanguageChanged()
-        {
-            if (_lastConnectionState != null)
+            if (dgDevices.SelectedItem is DeviceItemViewModel item)
             {
-                OnSupervisorStateChanged(this, _lastConnectionState);
+                var result = MessageBox.Show($"Bạn có chắc chắn muốn khởi động lại thiết bị {item.Model} ({item.Serial})?", 
+                    "Xác Nhận Khởi Động Lại", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                
+                if (result == MessageBoxResult.Yes)
+                {
+                    item.Status = "Đang khởi động lại...";
+                    item.StatusColor = "#EF4444";
+                    await ShopeeBypassService.RebootAsync(item.Serial);
+                }
             }
         }
-
-        private void OnSupervisorStateChanged(object? sender, ConnectionStateChangedEventArgs e)
-        {
-            _lastConnectionState = e;
-            Dispatcher.InvokeAsync(() =>
-            {
-                switch (e.State)
-                {
-                    case ConnectionState.Initializing:
-                        txtStatusTitle.Text = Localization.LanguageManager.GetString("Str.Connect.Title");
-                        txtStatusDetail.Text = Localization.LanguageManager.GetString("Str.Connect.InitDetail");
-                        txtStatusState.Text = Localization.LanguageManager.GetString("Str.Connect.Initializing");
-                        spinnerBrush.Color = Color.FromRgb(0x25, 0x63, 0xEB);
-                        progressBarStatus.Visibility = Visibility.Visible;
-                        statusDot.Visibility = Visibility.Collapsed;
-                        wfHost.Visibility = Visibility.Collapsed;
-                        overlayPanel.Visibility = Visibility.Visible;
-                        shopeeSidebar.UpdateConnectionStatus(null, Localization.LanguageManager.GetString("Str.Connect.Initializing"), "#2563EB", false);
-                        break;
-
-                    case ConnectionState.Searching:
-                        txtStatusTitle.Text = Localization.LanguageManager.GetString("Str.Connect.Title");
-                        txtStatusDetail.Text = Localization.LanguageManager.GetString("Str.Connect.Detail");
-                        txtStatusState.Text = Localization.LanguageManager.GetString("Str.Connect.Searching");
-                        spinnerBrush.Color = Color.FromRgb(0x25, 0x63, 0xEB);
-                        progressBarStatus.Visibility = Visibility.Visible;
-                        statusDot.Visibility = Visibility.Collapsed;
-                        wfHost.Visibility = Visibility.Collapsed;
-                        overlayPanel.Visibility = Visibility.Visible;
-                        shopeeSidebar.GetCurrentDeviceId = () => string.Empty;
-                        shopeeSidebar.UpdateConnectionStatus(null, Localization.LanguageManager.GetString("Str.Connect.Searching"), "#2563EB", false);
-                        break;
-
-                    case ConnectionState.DeviceDetected:
-                    case ConnectionState.Connecting:
-                        txtStatusTitle.Text = string.IsNullOrEmpty(e.DeviceModel) ? "Android Device" : e.DeviceModel;
-                        txtStatusDetail.Text = Localization.LanguageManager.GetString("Str.Connect.Connecting");
-                        txtStatusState.Text = Localization.LanguageManager.GetString("Str.Connect.Connecting");
-                        spinnerBrush.Color = Color.FromRgb(0x10, 0xB9, 0x81);
-                        progressBarStatus.Visibility = Visibility.Visible;
-                        statusDot.Visibility = Visibility.Collapsed;
-                        wfHost.Visibility = Visibility.Collapsed;
-                        overlayPanel.Visibility = Visibility.Visible;
-                        shopeeSidebar.UpdateConnectionStatus(null, Localization.LanguageManager.GetString("Str.Connect.Connecting"), "#2563EB", false);
-                        break;
-
-                    case ConnectionState.Connected:
-                        wfHost.Visibility = Visibility.Visible;
-                        overlayPanel.Visibility = Visibility.Collapsed;
-                        shopeeSidebar.GetCurrentDeviceId = () => e.DeviceId;
-                        shopeeSidebar.UpdateConnectionStatus(e.DeviceModel, Localization.LanguageManager.GetString("Str.Connect.Connected"), "#10B981", true);
-                        Dispatcher.InvokeAsync(() =>
-                        {
-                            AutoFitWindowToDevice();
-                        }, System.Windows.Threading.DispatcherPriority.Loaded);
-                        break;
-
-                    case ConnectionState.ConnectionLost:
-                        DetachScrcpyThread();
-                        _scrcpyHwnd = IntPtr.Zero;
-                        txtStatusTitle.Text = Localization.LanguageManager.GetString("Str.Connect.Disconnected");
-                        txtStatusDetail.Text = Localization.LanguageManager.GetString("Str.Connect.Detail");
-                        txtStatusState.Text = Localization.LanguageManager.GetString("Str.Connect.Disconnected");
-                        statusDot.Fill = new SolidColorBrush(Color.FromRgb(0x94, 0xA3, 0xB8));
-                        statusDot.Visibility = Visibility.Visible;
-                        progressBarStatus.Visibility = Visibility.Collapsed;
-                        wfHost.Visibility = Visibility.Collapsed;
-                        overlayPanel.Visibility = Visibility.Visible;
-                        shopeeSidebar.UpdateConnectionStatus(null, Localization.LanguageManager.GetString("Str.Connect.Disconnected"), "#94A3B8", false);
-                        break;
-
-                    case ConnectionState.Reconnecting:
-                        txtStatusTitle.Text = Localization.LanguageManager.GetString("Str.Connect.Reconnecting");
-                        txtStatusDetail.Text = Localization.LanguageManager.GetString("Str.Connect.Detail");
-                        txtStatusState.Text = Localization.LanguageManager.GetString("Str.Connect.Reconnecting");
-                        spinnerBrush.Color = Color.FromRgb(0xF5, 0x9E, 0x0B);
-                        progressBarStatus.Visibility = Visibility.Visible;
-                        statusDot.Visibility = Visibility.Collapsed;
-                        wfHost.Visibility = Visibility.Collapsed;
-                        overlayPanel.Visibility = Visibility.Visible;
-                        shopeeSidebar.UpdateConnectionStatus(null, $"{Localization.LanguageManager.GetString("Str.Connect.Reconnecting")} ({e.Attempt})", "#F59E0B", false);
-                        break;
-
-                    case ConnectionState.AdbUnavailable:
-                        txtStatusTitle.Text = Localization.LanguageManager.GetString("Str.Connect.AdbUnavailable");
-                        txtStatusDetail.Text = string.IsNullOrEmpty(e.Message) ? Localization.LanguageManager.GetString("Str.Connect.AdbError") : e.Message;
-                        txtStatusState.Text = Localization.LanguageManager.GetString("Str.Connect.AdbError");
-                        statusDot.Fill = new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44));
-                        statusDot.Visibility = Visibility.Visible;
-                        progressBarStatus.Visibility = Visibility.Collapsed;
-                        wfHost.Visibility = Visibility.Collapsed;
-                        overlayPanel.Visibility = Visibility.Visible;
-                        shopeeSidebar.UpdateConnectionStatus(null, Localization.LanguageManager.GetString("Str.Connect.AdbError"), "#EF4444", false);
-                        break;
-                }
-            });
-        }
-
     }
 }

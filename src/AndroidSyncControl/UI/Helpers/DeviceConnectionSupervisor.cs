@@ -43,6 +43,7 @@ namespace AndroidSyncControl.UI.Helpers
 
         public event EventHandler<ConnectionStateChangedEventArgs>? StateChanged;
         public event EventHandler<(int width, int height)>? DeviceResolutionChanged;
+        public event EventHandler? AttachedDevicesChanged;
 
         private ConnectionState _currentState = ConnectionState.Initializing;
         public ConnectionState CurrentState => _currentState;
@@ -100,6 +101,25 @@ namespace AndroidSyncControl.UI.Helpers
         public void RequestReconnectNow()
         {
             _reconnectSignal.Set();
+        }
+
+        /// <summary>
+        /// Switches active mirroring to a specific device serial and immediately restarts scrcpy.
+        /// </summary>
+        public void SwitchActiveDevice(string serial)
+        {
+            if (string.IsNullOrEmpty(serial)) return;
+            lock (_deviceLock)
+            {
+                if (!serial.Equals(ActiveDeviceId, StringComparison.OrdinalIgnoreCase))
+                {
+                    Log($"SwitchActiveDevice: {serial}");
+                    ActiveDeviceId = serial;
+                    ActiveDeviceModel = string.Empty;
+                    KillScrcpy();
+                    _reconnectSignal.Set();
+                }
+            }
         }
 
         private void Log(string msg)
@@ -595,6 +615,7 @@ namespace AndroidSyncControl.UI.Helpers
                 }
 
                 _deviceChangedSignal.Set();
+                AttachedDevicesChanged?.Invoke(this, EventArgs.Empty);
             }
         }
 
