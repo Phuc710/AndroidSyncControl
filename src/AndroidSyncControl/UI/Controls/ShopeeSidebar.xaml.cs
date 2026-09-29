@@ -12,11 +12,11 @@ namespace AndroidSyncControl.UI.Controls
 {
     public partial class ShopeeSidebar : UserControl
     {
-        public Func<string> GetCurrentDeviceId { get; set; }
-        public Action RequestAutoFit { get; set; }
-        public Action RequestFocusScrcpy { get; set; }
-        public Action RequestPasteScrcpy { get; set; }
-        public Action<string?> RequestPasteToDevice { get; set; }
+        public Func<string>? GetCurrentDeviceId { get; set; }
+        public Action? RequestAutoFit { get; set; }
+        public Action? RequestFocusScrcpy { get; set; }
+        public Action? RequestPasteScrcpy { get; set; }
+        public Action<string?>? RequestPasteToDevice { get; set; }
 
         public ShopeeSidebar()
         {
@@ -96,7 +96,8 @@ namespace AndroidSyncControl.UI.Controls
                     txtConnectedText.Text = status;
                     try
                     {
-                        dotConnected.Fill = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFromString(dotColorHex);
+                        if (new System.Windows.Media.BrushConverter().ConvertFromString(dotColorHex) is System.Windows.Media.Brush b)
+                            dotConnected.Fill = b;
                     }
                     catch { }
                 }
@@ -107,7 +108,8 @@ namespace AndroidSyncControl.UI.Controls
                     txtConnectionState.Text = status;
                     try
                     {
-                        dotConnection.Fill = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFromString(dotColorHex);
+                        if (new System.Windows.Media.BrushConverter().ConvertFromString(dotColorHex) is System.Windows.Media.Brush b)
+                            dotConnection.Fill = b;
                     }
                     catch { }
                 }

@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 using AndroidSyncControl.UI.Helpers;
@@ -49,11 +50,21 @@ namespace AndroidSyncControl.UI
         [DllImport("user32.dll")]
         private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
 
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+
+        private const uint SWP_NOSIZE = 0x0001;
+        private const uint SWP_NOMOVE = 0x0002;
+        private const uint SWP_NOZORDER = 0x0004;
+        private const uint SWP_FRAMECHANGED = 0x0020;
+        private const uint SWP_NOACTIVATE = 0x0010;
+
         private const uint KEYEVENTF_KEYUP = 0x0002;
         private const uint WM_ACTIVATE = 0x0006;
         private const int WA_ACTIVE = 1;
 
         private const int GWL_STYLE = -16;
+        private const int GWL_EXSTYLE = -20;
         private const int WS_VISIBLE = 0x10000000;
         private const int WS_CHILD = 0x40000000;
         private const int SW_SHOW = 5;
@@ -67,7 +78,7 @@ namespace AndroidSyncControl.UI
         private IntPtr _mainHwnd = IntPtr.Zero;          // cached once in Loaded — avoids COM interop per FocusScrcpy call
         private uint _attachedScrcpyThreadId = 0;
         private PanelClickFilter? _panelFilter;
-        private System.Windows.Threading.DispatcherTimer _resizeTimer; // debounce Win32 MoveWindow floods
+        private System.Windows.Threading.DispatcherTimer? _resizeTimer; // debounce Win32 MoveWindow floods
         private static readonly string _logPath =
             Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug_scrcpy.log");
 
@@ -175,7 +186,7 @@ namespace AndroidSyncControl.UI
             DeviceConnectionSupervisor.Instance.Start();
         }
 
-        private void MainWindow_Closed(object sender, EventArgs e)
+        private void MainWindow_Closed(object? sender, EventArgs e)
         {
             Log("MainWindow_Closed fired");
             _panelFilter?.ReleaseHandle();
@@ -192,12 +203,12 @@ namespace AndroidSyncControl.UI
             ResizeScrcpy();
         }
 
-        private void ScrcpyPanel_Resize(object sender, EventArgs e)
+        private void ScrcpyPanel_Resize(object? sender, EventArgs e)
         {
             // Debounce: restart the 50 ms timer on every resize event.
             // Prevents MoveWindow from being called dozens of times per second during drag-resize.
-            _resizeTimer.Stop();
-            _resizeTimer.Start();
+            _resizeTimer?.Stop();
+            _resizeTimer?.Start();
         }
 
         private bool IsTextInputActive()
@@ -375,7 +386,7 @@ namespace AndroidSyncControl.UI
                 shopeeSidebar.SetStatus(Localization.LanguageManager.GetString("Str.Status.Pasting"));
                 FocusScrcpy();
 
-                await ShopeeBypassService.DirectClipboardPasteAsync(activeDevice, text, TriggerScrcpyPaste);
+                await ShopeeBypassService.DirectClipboardPasteAsync(activeDevice, text);
 
                 shopeeSidebar.SetStatus(Localization.LanguageManager.GetString("Str.Status.Done"));
                 FocusScrcpy();
@@ -494,7 +505,7 @@ namespace AndroidSyncControl.UI
             }
         }
 
-        private void OnDeviceResolutionChanged(object sender, (int width, int height) res)
+        private void OnDeviceResolutionChanged(object? sender, (int width, int height) res)
         {
             Dispatcher.InvokeAsync(() =>
             {
@@ -657,14 +668,27 @@ namespace AndroidSyncControl.UI
                     overlayPanel.Visibility = Visibility.Collapsed;
 
                     SetParent(hwnd, scrcpyPanel.Handle);
+
+                    // Strip WS_POPUP, WS_CAPTION, WS_THICKFRAME, WS_MINIMIZEBOX, WS_MAXIMIZEBOX, WS_SYSMENU
                     int style = GetWindowLong(hwnd, GWL_STYLE);
-                    style = (style & ~(unchecked((int)0x80000000) | 0x00C00000 | 0x00040000)) | WS_CHILD | WS_VISIBLE;
+                    style = (style & ~(unchecked((int)0x80000000) | 0x00C00000 | 0x00040000 | 0x00020000 | 0x00010000 | 0x00080000)) | WS_CHILD | WS_VISIBLE;
                     SetWindowLong(hwnd, GWL_STYLE, style);
 
+                    // Strip WS_EX_DLGMODALFRAME, WS_EX_WINDOWEDGE, WS_EX_CLIENTEDGE, WS_EX_STATICEDGE
+                    int exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+                    exStyle &= ~(0x00000001 | 0x00000100 | 0x00000200 | 0x00020000);
+                    SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
+
+                    // Recalculate non-client area so SDL2 has 0 margin/titlebar offset
+                    SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+
                     AttachScrcpyThread(hwnd);
-                    ResizeScrcpy();
                     ShowWindow(hwnd, SW_SHOW);
                     FocusScrcpy();
+
+                    // Perform resize immediately and also once layout completes
+                    ResizeScrcpy();
+                    Dispatcher.InvokeAsync(ResizeScrcpy, System.Windows.Threading.DispatcherPriority.Loaded);
 
                     success = true;
                 }
@@ -736,7 +760,7 @@ namespace AndroidSyncControl.UI
             TriggerScrcpyKeyCombo(0x56); // VK_V
         }
 
-        private ConnectionStateChangedEventArgs _lastConnectionState;
+        private ConnectionStateChangedEventArgs? _lastConnectionState;
 
         private void OnLanguageChanged()
         {
@@ -746,7 +770,7 @@ namespace AndroidSyncControl.UI
             }
         }
 
-        private void OnSupervisorStateChanged(object sender, ConnectionStateChangedEventArgs e)
+        private void OnSupervisorStateChanged(object? sender, ConnectionStateChangedEventArgs e)
         {
             _lastConnectionState = e;
             Dispatcher.InvokeAsync(() =>

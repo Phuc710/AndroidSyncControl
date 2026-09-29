@@ -1,0 +1,1 @@
+am force-stop com.shopee.vn && pm clear com.shopee.vn && rm -rf /sdcard/Android/data/com.shopee.vn /sdcard/.shopee /sdcard/Shopee && settings put secure android_id $(head -c 8 /dev/urandom | xxd -p) && pm clear com.google.android.gms && monkey -p com.shopee.vn -c android.intent.category.LAUNCHER 1

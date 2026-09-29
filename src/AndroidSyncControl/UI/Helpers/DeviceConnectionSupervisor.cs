@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using AndroidSyncControl.Services.Device;
 
 namespace AndroidSyncControl.UI.Helpers
 {
@@ -30,14 +31,18 @@ namespace AndroidSyncControl.UI.Helpers
         public string Message { get; set; } = string.Empty;
     }
 
+    /// <summary>
+    /// High-performance connection supervisor for Android devices and scrcpy screen mirroring.
+    /// Handles event-driven device tracking, zero-latency window embedding, and auto-reconnection.
+    /// </summary>
     public sealed class DeviceConnectionSupervisor : IDisposable
     {
         private static readonly Lazy<DeviceConnectionSupervisor> _instance =
             new Lazy<DeviceConnectionSupervisor>(() => new DeviceConnectionSupervisor());
         public static DeviceConnectionSupervisor Instance => _instance.Value;
 
-        public event EventHandler<ConnectionStateChangedEventArgs> StateChanged;
-        public event EventHandler<(int width, int height)> DeviceResolutionChanged;
+        public event EventHandler<ConnectionStateChangedEventArgs>? StateChanged;
+        public event EventHandler<(int width, int height)>? DeviceResolutionChanged;
 
         private ConnectionState _currentState = ConnectionState.Initializing;
         public ConnectionState CurrentState => _currentState;
@@ -49,23 +54,23 @@ namespace AndroidSyncControl.UI.Helpers
         public int DeviceScreenHeight { get; private set; } = 1280;
         public double DeviceAspectRatio => DeviceScreenHeight > 0 ? (double)DeviceScreenWidth / DeviceScreenHeight : 9.0 / 16.0;
 
-        private CancellationTokenSource _cts;
-        private Task _supervisorTask;
+        private CancellationTokenSource? _cts;
+        private Task? _supervisorTask;
         private readonly AutoResetEvent _reconnectSignal = new AutoResetEvent(false);
 
         // Track-devices background listener
-        private Process _trackProc;
+        private Process? _trackProc;
         private readonly HashSet<string> _attachedDevices = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly object _deviceLock = new object();
         private readonly AutoResetEvent _deviceChangedSignal = new AutoResetEvent(false);
 
         // Scrcpy process supervisor
-        private Process _scrcpyProc;
+        private Process? _scrcpyProc;
         private IntPtr _scrcpyHwnd = IntPtr.Zero;
         private readonly object _scrcpyLock = new object();
 
         // Window Embedding Delegate
-        public Func<IntPtr, bool> EmbedScrcpyAction { get; set; }
+        public Func<IntPtr, bool>? EmbedScrcpyAction { get; set; }
         public IntPtr ScrcpyHwnd => _scrcpyHwnd;
 
         private DeviceConnectionSupervisor() { }
@@ -142,13 +147,20 @@ namespace AndroidSyncControl.UI.Helpers
             {
                 try
                 {
-                    // 1. Get current online device from track-devices or fallback probe
+                    // 1. Get current online device (prioritizing existing active device if still attached)
                     string detectedDevice = GetFirstOnlineDevice();
 
                     if (string.IsNullOrEmpty(detectedDevice))
                     {
-                        // One-shot fallback probe in case track-devices is still connecting
+                        // Fallback probe in case track-devices is still starting or missed an event
                         detectedDevice = await ShopeeBypassService.GetActiveDeviceAsync();
+                        if (!string.IsNullOrEmpty(detectedDevice))
+                        {
+                            lock (_deviceLock)
+                            {
+                                _attachedDevices.Add(detectedDevice);
+                            }
+                        }
                     }
 
                     if (string.IsNullOrEmpty(detectedDevice))
@@ -159,8 +171,8 @@ namespace AndroidSyncControl.UI.Helpers
 
                         ChangeState(ConnectionState.Searching, "Searching for device...");
 
-                        // Event-driven wait: Wait for device plug-in signal, manual retry, or timeout
-                        WaitHandle.WaitAny(new[] { _deviceChangedSignal, _reconnectSignal, token.WaitHandle }, 2500);
+                        // Event-driven wait: Wait for device plug-in signal, manual retry, or timeout (1500ms max)
+                        WaitHandle.WaitAny(new[] { _deviceChangedSignal, _reconnectSignal, token.WaitHandle }, 1500);
                         continue;
                     }
 
@@ -168,20 +180,15 @@ namespace AndroidSyncControl.UI.Helpers
                     ActiveDeviceId = detectedDevice;
                     if (string.IsNullOrEmpty(ActiveDeviceModel) || !ActiveDeviceId.Equals(detectedDevice, StringComparison.OrdinalIgnoreCase))
                     {
-                        ActiveDeviceModel = await ShopeeBypassService.GetDeviceModelAsync(ActiveDeviceId);
-                    }
-
-                    try
-                    {
-                        var (resW, resH) = await ShopeeBypassService.GetDeviceResolutionAsync(ActiveDeviceId);
-                        if (resW > 0 && resH > 0)
+                        try
                         {
-                            DeviceScreenWidth = resW;
-                            DeviceScreenHeight = resH;
-                            Log($"Device native resolution: {resW}x{resH} (Ratio: {DeviceAspectRatio:F4})");
+                            ActiveDeviceModel = await ShopeeBypassService.GetDeviceModelAsync(ActiveDeviceId);
+                        }
+                        catch
+                        {
+                            ActiveDeviceModel = "Android Device";
                         }
                     }
-                    catch { }
 
                     if (reconnectAttempt > 0)
                     {
@@ -189,12 +196,10 @@ namespace AndroidSyncControl.UI.Helpers
                     }
                     else
                     {
-                        ChangeState(ConnectionState.DeviceDetected, $"Found {ActiveDeviceModel}");
-                        await Task.Delay(200, token);
                         ChangeState(ConnectionState.Connecting, $"Connecting to {ActiveDeviceModel}...");
                     }
 
-                    // 3. Launch scrcpy via ScrcpySupervisor
+                    // 3. Launch scrcpy with zero-latency window embedding
                     DateTime launchTime = DateTime.UtcNow;
                     var scrcpyResult = await LaunchScrcpyAsync(ActiveDeviceId, ActiveDeviceModel, token);
 
@@ -203,7 +208,7 @@ namespace AndroidSyncControl.UI.Helpers
                         reconnectAttempt = 0;
                         ChangeState(ConnectionState.Connected, "Connected");
 
-                        // Wait until scrcpy exits OR device is physically removed from track-devices
+                        // Monitor active session until scrcpy exits or device disconnects
                         await MonitorActiveSessionAsync(ActiveDeviceId, token);
                     }
                     else
@@ -215,24 +220,30 @@ namespace AndroidSyncControl.UI.Helpers
                         if (runSeconds < 4.0)
                         {
                             // Immediate crash -> Downgrade encoder for this device
+                            Log($"Scrcpy crashed early ({runSeconds:F1}s). Downgrading to software encoder fallback.");
                             ScrcpyProfile.MarkHardwareEncoderFailed(ActiveDeviceId);
                         }
 
                         // Check if device is still attached
                         if (IsDeviceOnline(ActiveDeviceId))
                         {
-                            // Calculate capped exponential backoff (1s, 2s, 4s, max 5s)
-                            int delayMs = (int)Math.Min(1000 * Math.Pow(2, Math.Max(0, reconnectAttempt - 1)), 5000);
-                            ChangeState(ConnectionState.Reconnecting, $"Retrying in {delayMs / 1000}s...", reconnectAttempt);
+                            // Fast capped retry backoff: 300ms, 800ms, 1500ms, max 3000ms
+                            int delayMs = reconnectAttempt switch
+                            {
+                                1 => 300,
+                                2 => 800,
+                                3 => 1500,
+                                _ => 3000
+                            };
 
-                            // Wait delayMs OR manual retry signal
-                            WaitHandle.WaitAny(new[] { _reconnectSignal, token.WaitHandle }, delayMs);
+                            ChangeState(ConnectionState.Reconnecting, $"Retrying in {delayMs}ms...", reconnectAttempt);
+                            WaitHandle.WaitAny(new[] { _reconnectSignal, _deviceChangedSignal, token.WaitHandle }, delayMs);
                         }
                         else
                         {
                             ChangeState(ConnectionState.ConnectionLost, "Device unplugged.");
                             reconnectAttempt = 0;
-                            await Task.Delay(1000, token);
+                            await Task.Delay(500, token);
                         }
                     }
                 }
@@ -243,7 +254,7 @@ namespace AndroidSyncControl.UI.Helpers
                 catch (Exception ex)
                 {
                     ChangeState(ConnectionState.AdbUnavailable, $"ADB Error: {ex.Message}");
-                    WaitHandle.WaitAny(new[] { _reconnectSignal, token.WaitHandle }, 3000);
+                    WaitHandle.WaitAny(new[] { _reconnectSignal, token.WaitHandle }, 2000);
                 }
             }
 
@@ -261,7 +272,6 @@ namespace AndroidSyncControl.UI.Helpers
 
             if (_scrcpyProc.HasExited) return;
 
-            // Ensure current device is acknowledged in attached devices
             lock (_deviceLock)
             {
                 _attachedDevices.Add(currentDevice);
@@ -273,7 +283,8 @@ namespace AndroidSyncControl.UI.Helpers
             {
                 while (!tcs.Task.IsCompleted && !token.IsCancellationRequested)
                 {
-                    var delayTask = Task.Delay(1500, token);
+                    // Check every 500ms for faster disconnect responsiveness
+                    var delayTask = Task.Delay(500, token);
                     var completedTask = await Task.WhenAny(tcs.Task, delayTask);
 
                     if (completedTask == tcs.Task)
@@ -298,7 +309,7 @@ namespace AndroidSyncControl.UI.Helpers
                 }
             }
 
-            try { _scrcpyProc.Exited -= onExited; } catch { }
+            try { if (_scrcpyProc != null) _scrcpyProc.Exited -= onExited; } catch { }
             KillScrcpy();
         }
 
@@ -335,7 +346,7 @@ namespace AndroidSyncControl.UI.Helpers
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
-                WorkingDirectory = Path.GetDirectoryName(scrcpyExe)
+                WorkingDirectory = Path.GetDirectoryName(scrcpyExe) ?? string.Empty
             };
 
             psi.EnvironmentVariables["ADB"] = AndroidToolchain.AdbPath;
@@ -347,9 +358,15 @@ namespace AndroidSyncControl.UI.Helpers
                 if (string.IsNullOrWhiteSpace(line)) return;
                 try
                 {
-                    // Detect scrcpy texture resolution: "INFO: Texture: 720x1280" or "INFO: New texture: 1280x720"
-                    var match = System.Text.RegularExpressions.Regex.Match(line, @"(?:Texture|texture|size)\s*:\s*(\d+)x(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                    if (match.Success && int.TryParse(match.Groups[1].Value, out int tw) && int.TryParse(match.Groups[2].Value, out int th))
+                    // Detect scrcpy texture resolution: "INFO: Texture: 720x1280" or "INFO: New texture: 1080x2400"
+                    var match = System.Text.RegularExpressions.Regex.Match(
+                        line,
+                        @"(?:Texture|texture|size)\s*:\s*(\d+)x(\d+)",
+                        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+                    if (match.Success &&
+                        int.TryParse(match.Groups[1].Value, out int tw) &&
+                        int.TryParse(match.Groups[2].Value, out int th))
                     {
                         if (tw > 0 && th > 0 && (tw != DeviceScreenWidth || th != DeviceScreenHeight))
                         {
@@ -388,31 +405,35 @@ namespace AndroidSyncControl.UI.Helpers
                 Log($"scrcpy process started with PID: {_scrcpyProc.Id}");
             }
 
-            // Find SDL2 window handle (SDL_app)
+            // Find SDL2 window handle (SDL_app) with adaptive low-latency polling
             IntPtr hwnd = IntPtr.Zero;
-            for (int i = 0; i < 40; i++)
+            for (int i = 0; i < 60; i++)
             {
-                if (token.IsCancellationRequested) return new LaunchResult { Success = false };
-                await Task.Delay(200, token);
+                if (token.IsCancellationRequested) return new LaunchResult { Success = false, ErrorMessage = "Cancelled" };
+
+                // Fast check window before delaying
+                hwnd = FindWindow("SDL_app", screenTitle);
+                if (hwnd != IntPtr.Zero)
+                {
+                    _scrcpyHwnd = hwnd;
+                    Log($"Found SDL2 screen HWND: {hwnd} on attempt {i + 1}");
+                    break;
+                }
 
                 if (_scrcpyProc == null || _scrcpyProc.HasExited)
                 {
                     string err = stderrLog.ToString();
                     Log($"scrcpy exited early! ExitCode={_scrcpyProc?.ExitCode}, Error={err}");
-                    if (err.Contains("MediaCodec$CodecException"))
+                    if (err.Contains("MediaCodec$CodecException") || err.Contains("Encoder exception"))
                     {
                         ScrcpyProfile.MarkHardwareEncoderFailed(deviceId);
                     }
                     return new LaunchResult { Success = false, ErrorMessage = err };
                 }
 
-                hwnd = FindWindow("SDL_app", screenTitle);
-                if (hwnd != IntPtr.Zero)
-                {
-                    _scrcpyHwnd = hwnd;
-                    Log($"Found SDL2 screen HWND: {hwnd}");
-                    break;
-                }
+                // Adaptive delay: 25ms for the first 20 checks (500ms), 50ms for next 20, 100ms thereafter
+                int pollDelay = (i < 20) ? 25 : (i < 40 ? 50 : 100);
+                await Task.Delay(pollDelay, token);
             }
 
             if (hwnd == IntPtr.Zero)
@@ -440,12 +461,13 @@ namespace AndroidSyncControl.UI.Helpers
                 {
                     if (_scrcpyProc != null && !_scrcpyProc.HasExited)
                     {
-                        _scrcpyProc.Kill();
+                        _scrcpyProc.Kill(entireProcessTree: true);
                     }
                 }
                 catch { }
                 finally
                 {
+                    _scrcpyProc?.Dispose();
                     _scrcpyProc = null;
                     _scrcpyHwnd = IntPtr.Zero;
                 }
@@ -463,6 +485,24 @@ namespace AndroidSyncControl.UI.Helpers
 
         private void StartTrackDevices(CancellationToken token)
         {
+            // Seed current devices immediately so initial connection is instant
+            Task.Run(async () =>
+            {
+                try
+                {
+                    var initialDevices = await DeviceTelemetryService.GetAllConnectedDevicesAsync();
+                    if (initialDevices.Count > 0)
+                    {
+                        lock (_deviceLock)
+                        {
+                            foreach (var d in initialDevices) _attachedDevices.Add(d);
+                        }
+                        _deviceChangedSignal.Set();
+                    }
+                }
+                catch { }
+            }, token);
+
             Task.Run(async () =>
             {
                 while (!token.IsCancellationRequested)
@@ -487,65 +527,75 @@ namespace AndroidSyncControl.UI.Helpers
 
                         using (var reader = _trackProc.StandardOutput)
                         {
-                            string line;
-                            while ((line = await reader.ReadLineAsync()) != null && !token.IsCancellationRequested)
+                            string? line;
+                            while ((line = await reader.ReadLineAsync(token)) != null && !token.IsCancellationRequested)
                             {
                                 ParseTrackDevicesLine(line);
                             }
                         }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
                     }
                     catch (Exception ex)
                     {
                         Log($"TrackDevices exception: {ex.Message}");
                     }
 
-                    // Stream ended or crashed — fallback reconnect in 1.5s
-                    await Task.Delay(1500, token);
+                    // Stream ended or crashed — fallback reconnect in 1.0s
+                    await Task.Delay(1000, token);
                 }
             }, token);
         }
 
         private void ParseTrackDevicesLine(string rawLine)
         {
-            if (string.IsNullOrWhiteSpace(rawLine)) return;
-
-            // ADB track-devices lines typically look like: "0018<serial>\t<state>" or "<serial>\t<state>"
-            string clean = rawLine.Trim();
-            if (clean.Length >= 4 && int.TryParse(clean.Substring(0, 4), System.Globalization.NumberStyles.HexNumber, null, out int len))
+            if (string.IsNullOrWhiteSpace(rawLine))
             {
-                clean = clean.Substring(4).Trim();
-            }
-
-            lock (_deviceLock)
-            {
-                if (string.IsNullOrEmpty(clean))
+                lock (_deviceLock)
                 {
-                    Log("TrackDevices: empty device list received (all devices disconnected).");
-                    _attachedDevices.Clear();
-                }
-                else
-                {
-                    // Line may contain multiple devices or single: serial \t state
-                    var parts = clean.Split(new[] { '\t', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                    if (parts.Length >= 2)
+                    if (_attachedDevices.Count > 0)
                     {
-                        string serial = parts[0].Trim();
-                        string state = parts[1].Trim();
-
-                        if (state.Equals("device", StringComparison.OrdinalIgnoreCase))
-                        {
-                            _attachedDevices.Add(serial);
-                        }
-                        else
-                        {
-                            _attachedDevices.Remove(serial);
-                        }
-                        Log($"TrackDevices update: serial='{serial}', state='{state}', totalAttached={_attachedDevices.Count}");
+                        Log("TrackDevices: empty line received, clearing attached devices.");
+                        _attachedDevices.Clear();
+                        _deviceChangedSignal.Set();
                     }
                 }
+                return;
             }
 
-            _deviceChangedSignal.Set();
+            string clean = rawLine.Trim();
+
+            // Ignore daemon logs and header lines
+            if (clean.StartsWith("*", StringComparison.OrdinalIgnoreCase) ||
+                clean.StartsWith("List of", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            // Standard ADB track-devices output: "<serial>\t<state>"
+            var parts = clean.Split(new[] { '\t', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length >= 2)
+            {
+                string serial = parts[0].Trim();
+                string state = parts[1].Trim();
+
+                lock (_deviceLock)
+                {
+                    if (state.Equals("device", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _attachedDevices.Add(serial);
+                    }
+                    else
+                    {
+                        _attachedDevices.Remove(serial);
+                    }
+                    Log($"TrackDevices update: serial='{serial}', state='{state}', totalAttached={_attachedDevices.Count}");
+                }
+
+                _deviceChangedSignal.Set();
+            }
         }
 
         private void StopTrackDevices()
@@ -554,21 +604,30 @@ namespace AndroidSyncControl.UI.Helpers
             {
                 if (_trackProc != null && !_trackProc.HasExited)
                 {
-                    _trackProc.Kill();
+                    _trackProc.Kill(entireProcessTree: true);
                 }
             }
             catch { }
             finally
             {
+                _trackProc?.Dispose();
                 _trackProc = null;
             }
         }
 
+        /// <summary>
+        /// Gets the preferred online device. If the currently active device is still attached,
+        /// keeps it to prevent random device switching when multiple phones are connected.
+        /// </summary>
         private string GetFirstOnlineDevice()
         {
             lock (_deviceLock)
             {
-                return _attachedDevices.FirstOrDefault();
+                if (!string.IsNullOrEmpty(ActiveDeviceId) && _attachedDevices.Contains(ActiveDeviceId))
+                {
+                    return ActiveDeviceId;
+                }
+                return _attachedDevices.FirstOrDefault() ?? string.Empty;
             }
         }
 

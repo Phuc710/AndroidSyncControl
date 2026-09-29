@@ -2,7 +2,8 @@
 name: shopee-bypass-engine
 description: >
   Kỹ năng điều phối toàn diện quy trình làm sạch telemetry thiết bị Android,
-  triệt tiêu vector định danh để bypass mã lỗi rủi ro Shopee M02 / D02 / L01.
+  triệt tiêu vector định danh để bypass mã lỗi rủi ro Shopee M02 / D02 / L01 / M04.
+  Hỗ trợ định tuyến chiến lược thông minh (Adaptive Routing) cho cả máy Rooted (Xposed/LSPosed) và Non-Root.
 triggers:
   - "bypass shopee"
   - "sửa lỗi M02"
@@ -11,89 +12,102 @@ triggers:
   - "làm sạch thiết bị"
   - "đổi IP Shopee"
   - "reset SSAID Shopee"
+  - "deep root bypass"
 ---
 
-# Skill: Shopee Bypass Engine (M02 / D02 / L01 Mitigation)
+# Skill: Shopee Bypass Engine (M02 / D02 / L01 / M04 Mitigation)
 
 ## 1. Bản Đồ Mã Lỗi Shopee (Risk Matrix)
 
-| Mã Lỗi | Nguyên Nhân Gốc | Mức Độ | Biện Pháp Kỹ Thuật |
+| Mã Lỗi | Nguyên Nhân Gốc | Mức Độ | Biện Pháp Kỹ Thuật Senior |
 |---|---|---|---|
-| **M02 / D02** | Dấu vân tay thiết bị (SSAID + Local Token) nằm trong blacklist áp mã giảm giá. | Thiết bị | Thực thi trọn vẹn Pipeline 6 bước làm sạch. |
-| **L01** | Giới hạn số lượng tài khoản đăng nhập trên cùng một ID phần cứng. | Thiết bị | Xóa sạch session token, reset SSAID và GAID. |
-| **M01 / D01** | Tài khoản bị khóa trực tiếp từ máy chủ (Server-side Fraud Flag). | Tài khoản | Không thể bypass bằng thiết bị; bắt buộc đổi tài khoản. |
+| **M02 / D02** | Dấu vân tay thiết bị (SSAID + Local Token + Account Token) nằm trong blacklist áp mã giảm giá. | Thiết bị | Thực thi trọn vẹn Pipeline làm sạch + Xóa AccountManager + Đổi SSAID + Đổi IP 4G. |
+| **L01** | Giới hạn số lượng tài khoản đăng nhập trên cùng một ID phần cứng. | Thiết bị | Xóa sạch session token, reset SSAID, GAID và GSF ID. |
+| **M04** | Flag bất thường môi trường (Root detection, Proxy/VPN leak, Emulator signature). | Môi trường | Giấu Root bằng Shamiko + chặn quét app bằng HideMyApplist + xóa GSF token. |
+| **M01 / D01** | Tài khoản bị khóa trực tiếp từ máy chủ (Server-side Fraud Flag). | Tài khoản | Không thể bypass bằng thiết bị; bắt buộc đổi tài khoản mới. |
 
 ---
 
-## 2. Quy Trình 6 Bước Tiêu Chuẩn (Universal No-Root Pipeline)
+## 2. Intelligent Adaptive Pipeline (Chuẩn SC-11 / SC-12)
 
-### Bước 1: Dừng & Xóa Sạch Dữ Liệu Ứng Dụng
+Pipeline tự động nhận diện môi trường thực tế tại runtime và lựa chọn nhánh thực thi tối ưu nhất:
+
+```mermaid
+flowchart TD
+    A[Bắt Đầu: Trigger Bypass] --> B[Phase 0: Environment Discovery (Root, Xposed, Network Type)]
+    B --> C[Phase 1: Scorched Earth - Wipe Data & /sdcard/.shopee]
+    C --> D{Verify /sdcard/.shopee đã biến mất?}
+    D -- Chưa --> E[Leo thang quyền su -c rm -rf]
+    D -- Đã sạch --> F[Phase 2: Mutate Device SSAID qua CSPRNG Hex]
+    E --> F
+    F --> G[Phase 3: Reset GAID com.google.android.gms & GSF com.google.android.gsf]
+    G --> H[Phase 4: Evict Shopee AccountManager Tokens ngoài Sandbox]
+    H --> I{Thiết bị có Root + PrivacyKit?}
+    I -- Có --> J[Phase 5: Broadcast Intent kích hoạt Hardware Hook Mutation]
+    I -- Không --> K[Bỏ qua Phase 5]
+    J --> L[Phase 6: Gạt Airplane Mode -> Delay 2s]
+    K --> L
+    L --> M[Phase 7: Tắt Airplane Mode -> Adaptive IP Polling 3.5s-5s]
+    M --> N{Verify IP Public mới khác IP cũ?}
+    N -- Chưa đổi --> M
+    N -- Đã đổi --> O[Phase 8: Launch Clean Intent & Process Verification]
+```
+
+---
+
+## 3. Quy Trình Chi Tiết Từng Bước
+
+### Bước 0: Nhận Diện Môi Trường (Real State Discovery)
+- Kiểm tra quyền Root: `su -c id`
+- Kiểm tra module Xposed/PrivacyKit: `pm list packages | grep com.sal.privacykit`
+- Kiểm tra card mạng: `rmnet`/`ccmni` (Cellular) vs `wlan` (WiFi)
+
+### Bước 1: Tiêu Hủy Bằng Chứng (Scorched Earth)
 ```bash
 adb shell am force-stop com.shopee.vn
 adb shell pm clear com.shopee.vn
-adb shell rm -rf /sdcard/Android/data/com.shopee.vn
-adb shell rm -rf /sdcard/.shopee
+adb shell rm -rf /sdcard/Android/data/com.shopee.vn /sdcard/.shopee /sdcard/Android/media/com.shopee.vn
+# Verification Gate:
+adb shell ls -d /sdcard/.shopee 2>/dev/null
 ```
-*Mục đích:* Tiêu hủy toàn bộ SQLite database, SharedPreferences chứa access token cũ, và hardware token ẩn trên thẻ nhớ ngoài.
 
 ### Bước 2: Sinh & Ghi Đè Android ID (SSAID)
-Sinh chuỗi Hex 16 ký tự ngẫu nhiên bằng CSPRNG:
 ```bash
-adb shell settings put secure android_id <16_hex_chars>
-# Xác minh:
+adb shell settings put secure android_id <16_hex_chars_csprng>
+# Verification Gate:
 adb shell settings get secure android_id
 ```
-*Mục đích:* Tạo định danh phần cứng giả lập mới hoàn toàn cho thiết bị.
 
-### Bước 3: Reset Google Advertising ID (GAID)
+### Bước 3: Reset Google Advertising ID (GAID) & Google Services Framework (GSF)
 ```bash
 adb shell pm clear com.google.android.gms
+adb shell pm clear com.google.android.gsf
 ```
-*Mục đích:* Buộc Google Play Services khởi tạo ID theo dõi quảng cáo mới, cắt đứt chuỗi liên kết hành vi xuyên ứng dụng.
 
-### Bước 4: Kích Hoạt Chế Độ Máy Bay (Ngắt Socket)
+### Bước 4: Xóa Persistent Tokens Trong Android AccountManager
+Quét các tài khoản Shopee/Sea nằm ngoài App Sandbox và phát broadcast thu hồi:
+```bash
+adb shell am broadcast -a android.accounts.action.ACCOUNT_REMOVED --es account_name "<NAME>" --es account_type "<TYPE>"
+```
+
+### Bước 5: Kích Hoạt Phần Cứng Sâu (Nếu Có Root + PrivacyKit)
+```bash
+adb shell am broadcast -a com.sal.privacykit.RANDOMIZE
+adb shell am broadcast -a com.device.id.masker.RANDOMIZE
+```
+
+### Bước 6 & 7: Gạt Airplane Mode & Adaptive IP Poller
 ```bash
 adb shell cmd connectivity airplane-mode enable
-```
-*Mục đích:* Hủy các kết nối TCP/IP đang mở giữa thiết bị và server gateway của Shopee.
-
-### Bước 5: Tắt Chế Độ Máy Bay & Nhận IP 4G Mới
-```bash
+# Nghỉ 2 giây
 adb shell cmd connectivity airplane-mode disable
-```
-*Lưu ý cốt tử:* **Bắt buộc chờ từ 3.5 đến 5.0 giây** để modem di động đàm phán lại với trạm BTS và nhận dải IP Public mới.
-Kiểm tra IP mới qua:
-```bash
-adb shell ip addr show rmnet_data0
-# Hoặc ping test
+# Vòng lặp quan sát IP mới (Adaptive Poller) với timeout 25s:
+adb shell ip -f inet addr
 ```
 
-### Bước 6: Khởi Động Lại Ứng Dụng Bằng Launcher Intent
+### Bước 8: Khởi Động & Xác Thực Tiến Trình
 ```bash
 adb shell monkey -p com.shopee.vn -c android.intent.category.LAUNCHER 1
-```
-*Mục đích:* Khởi động ứng dụng như thể người dùng vừa bấm vào icon trên màn hình chính, kích hoạt chu trình onboarding mới toanh.
-
----
-
-## 3. Điều Kiện Tiên Quyết (Pre-flight Checklist)
-Trước khi chạy pipeline:
-1. Thiết bị phải dùng **SIM 4G/5G** để kết nối mạng di động.
-2. **Tắt kết nối Wi-Fi** hoàn toàn (vì bật/tắt airplane mode trên mạng Wi-Fi thông thường không làm thay đổi IP Public của Router).
-3. Đảm bảo cáp USB kết nối ổn định, kiểm tra lệnh `adb devices` trả về trạng thái `device`.
-
----
-
-## 4. Kịch Bản Kiểm Tra Xác Thực Sau Khi Bypass (Post-flight Verification)
-Chạy script kiểm tra `check_info.bat` hoặc các lệnh shell sau:
-```bash
-# 1. Kiểm tra SSAID đã đổi chưa:
-adb shell settings get secure android_id
-
-# 2. Kiểm tra thư mục ẩn đã bị xóa sạch chưa:
-adb shell ls -la /sdcard/.shopee
-# Kết quả mong đợi: No such file or directory
-
-# 3. Kiểm tra IP mạng di động hiện tại:
-adb shell curl -s https://api.ipify.org
+# Verification Gate:
+adb shell pidof com.shopee.vn
 ```

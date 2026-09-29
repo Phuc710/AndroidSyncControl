@@ -59,18 +59,33 @@ Tài liệu này tổng hợp toàn bộ các tình huống lỗi thường gặ
 
 ---
 
-## 3. Lỗi Tính Năng Nhập Liệu & Mạng
+## 3. Lỗi Tính Năng Nhập Liệu & Chuột
 
-### 🔴 Lỗi 5: Gõ tiếng Việt bị mất dấu hoặc xuất hiện ký tự lạ
-- **Hiện tượng**: Nhập văn bản tiếng Việt có dấu (như *"Nguyễn Văn A"*) nhưng trên điện thoại hiển thị *"Nguyn Vn A"* hoặc dấu hỏi chấm.
-- **Nguyên nhân**: Lệnh `adb shell input text` truyền thống của Android chỉ hỗ trợ các ký tự bảng chữ cái ASCII tiêu chuẩn tiếng Anh (A-Z).
+### 🔴 Lỗi 5: Click chuột bị lệch toạ độ (Bấm phím G lại ăn thành T)
+- **Hiện tượng**: Click chuột vào hàng phím thứ 3 trên bàn phím ảo (ví dụ chữ `G`) nhưng hệ thống lại nhận thành chữ `T` (hàng phím thứ 2 nằm ngay phía trên).
+- **Nguyên nhân**: Cửa sổ `scrcpy.exe` (chạy SDL2) mặc định được Windows tạo kèm thanh tiêu đề (Title Bar) cao khoảng 30–35px. Khi app dùng Win32 `SetParent` và `SetWindowLong` lột thanh tiêu đề để nhúng vào giao diện, SDL2 bên trong không cập nhật lại Non-Client metrics, khiến toàn bộ toạ độ click chuột bị dịch lệch lên trên đúng 1 hàng phím (~32px).
 - **Cách khắc phục**:
-  - Hãy sử dụng tính năng **"Dán trực tiếp" (`btn_paste_direct`)** trên thanh Sidebar.
-  - Ứng dụng sẽ mã hóa chuỗi văn bản thành UTF-8 Base64 và truyền thẳng vào dịch vụ Clipboard của Android rồi kích hoạt lệnh dán (`KEYCODE_PASTE`), bảo đảm giữ nguyên 100% dấu tiếng Việt và các ký tự đặc biệt.
+  - Hệ thống đã tự động kích hoạt cờ `--window-borderless` trong [`ScrcpyProfile.cs`](file:///c:/Users/Phucx/Desktop/ROOT_Shopee/src/AndroidSyncControl/UI/Helpers/ScrcpyProfile.cs) để cửa sổ khởi tạo không viền ngay từ đầu.
+  - Gọi Win32 `SetWindowPos` kèm cờ `SWP_FRAMECHANGED` để đồng bộ toạ độ chuột chuẩn xác từng pixel.
 
 ---
 
-### 🔴 Lỗi 6: Bấm "Đổi IP (4G)" nhưng IP không thay đổi
+### 🔴 Lỗi 6: Dán text (Ctrl+V hoặc Send) bị ra ký tự rác hoặc nội dung clipboard cũ (`NEWUSER...`)
+- **Hiện tượng**: Copy email mới (ví dụ `paulcampbell350@dewii.dpdns.org`), ấn nút **Send** hoặc nhấn `Ctrl + V` nhưng trên điện thoại lại paste ra đoạn chữ cũ rích trước đó (`NEWUSERIYHGRW4RE`) hoặc bị bộ gõ Telex trên điện thoại biến dạng (`aádasdadaádasdad`).
+- **Nguyên nhân**:
+  1. Khi cửa sổ scrcpy bị nhúng vào WPF dưới dạng Child Window, lệnh phím ảo `Ctrl + V` (`PostMessage`) không có quyền đồng bộ clipboard từ máy tính sang Android. Điện thoại chỉ nhận phím Paste và lôi nội dung clipboard cũ trong máy ra dán.
+  2. Bàn phím điện thoại đang bật chế độ gõ Tiếng Việt Telex.
+- **Cơ chế khắc phục (Direct ADB Input Text Injection)**:
+  - Cả nút **Send** trên Sidebar và phím tắt **`Ctrl + V`** toàn cục đều được chuyển sang cơ chế **Direct ADB Input Text Injection**:
+    ```bash
+    adb -s <deviceId> shell input text '<escaped_string>'
+    ```
+  - Bơm trực tiếp từng ký tự vào ô đang focus trên Android, chấp hết mọi ký tự đặc biệt (`@`, `.`, `_`, `-`, số, chữ hoa/thường), không còn phụ thuộc vào clipboard của Android hay scrcpy.
+  - *Lưu ý:* Nên chuyển bàn phím ảo trên điện thoại sang **English (US)** hoặc ấn ẩn bàn phím ảo trước khi paste để tránh bộ gõ Telex tự động ghép dấu.
+
+---
+
+### 🔴 Lỗi 7: Bấm "Đổi IP (4G)" nhưng IP không thay đổi
 - **Hiện tượng**: Bấm nút đổi IP thành công nhưng kiểm tra lại IP mạng vẫn giữ nguyên như cũ.
 - **Nguyên nhân**:
   1. Điện thoại đang kết nối Wi-Fi (Chế độ máy bay chỉ làm mới IP của mạng dữ liệu di động SIM 4G, không đổi được IP modem Wi-Fi nhà bạn).

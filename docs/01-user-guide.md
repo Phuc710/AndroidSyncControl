@@ -94,10 +94,20 @@ Giao diện ứng dụng chia làm 2 khu vực chính:
 - **Reboot**: Khởi động lại điện thoại (có hộp thoại xác nhận tránh bấm nhầm).
 - **Screenshot**: Chụp màn hình điện thoại và tự động lưu vào thư mục `screenshots/` trên máy tính, đồng thời mở thư mục chứa ảnh.
 
-### 2. Nhóm Nhập Liệu & Bộ Nhớ Tạm (Clipboard & Text)
-- **Ô nhập văn bản (`txt_input`)**: Tự động bắt nội dung clipboard máy tính khi vừa click vào ô.
-- **Gửi text (`btn_send_text`)**: Gõ chuỗi ký tự trong ô vào ô đang chọn trên điện thoại.
-- **Dán trực tiếp (`btn_paste_direct`)**: Hỗ trợ truyền ký tự tiếng Việt có dấu Unicode, ký tự đặc biệt mà bàn phím gõ tay ADB thông thường không gõ được.
+### 2. Nhóm Nhập Liệu & Bộ Nhớ Tạm (Clipboard & Direct ADB Input)
+- **Cơ chế Direct ADB Input Text Injection**:
+  Toàn bộ thao tác nhập văn bản (khi bấm **Send** hoặc phím tắt **`Ctrl + V`**) đều được bơm trực tiếp qua dịch vụ ADB Input:
+  ```bash
+  adb -s <deviceId> shell input text '<escaped_text>'
+  ```
+  - Hỗ trợ chuẩn xác 100% mọi ký tự email, mật khẩu phức tạp: `@`, `.`, `_`, `-`, `!`, `?`, chữ hoa, chữ thường và chữ số.
+  - Không phụ thuộc vào bộ nhớ tạm cũ của Android (tránh dính rác `NEWUSER...` cũ trên máy).
+  - Không phụ thuộc vào scrcpy window focus.
+- **Phím tắt nhanh**:
+  - **`Ctrl + V`**: Tự động lấy text đang có trong Clipboard máy tính, hiển thị lên ô PASTE và bơm thẳng vào ô đang focus trên điện thoại.
+  - **`Ctrl + A`**: Chọn tất cả (Select All) trên điện thoại.
+  - **`Ctrl + F` / `F11`**: Tự động căn chỉnh kích thước cửa sổ vừa khít với tỷ lệ màn hình điện thoại (Fit Screen).
+- **Ô nhập văn bản (`txt_input`)**: Nhập chuỗi tùy ý hoặc dán từ máy tính vào. Bấm phím **Enter** hoặc nút **Send (`>`)** để bơm văn bản vào điện thoại.
 
 ### 3. Nhóm Mạng & Kết Nối (Network)
 - **Đổi IP (4G)**: Tự động bật và tắt chế độ máy bay (Airplane Mode) sau 3 giây để nhà mạng cấp phát dải IP di động 4G/LTE mới.
